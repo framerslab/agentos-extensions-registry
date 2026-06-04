@@ -75,10 +75,10 @@ describe('PROVIDER_CATALOG specific providers', () => {
     expect(entry!.smallModel).toBe('gpt-4o-mini');
   });
 
-  it('anthropic: claude-sonnet-4-6-20250514 default, claude-haiku-4-5-20251001 small', () => {
+  it('anthropic: claude-sonnet-4-6 default, claude-haiku-4-5-20251001 small', () => {
     const entry = PROVIDER_CATALOG.find((e) => e.providerId === 'anthropic');
     expect(entry).toBeDefined();
-    expect(entry!.defaultModel).toBe('claude-sonnet-4-6-20250514');
+    expect(entry!.defaultModel).toBe('claude-sonnet-4-6');
     expect(entry!.smallModel).toBe('claude-haiku-4-5-20251001');
   });
 

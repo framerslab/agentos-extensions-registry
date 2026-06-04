@@ -88,7 +88,7 @@ export const PROVIDER_CATALOG: ProviderRegistryEntry[] = [
     requiredSecrets: ['anthropic.apiKey'],
     defaultPriority: 100,
     available: false,
-    defaultModel: 'claude-sonnet-4-6-20250514',
+    defaultModel: 'claude-sonnet-4-6',
     smallModel: 'claude-haiku-4-5-20251001',
     apiBaseUrl: 'https://api.anthropic.com',
   },
