@@ -14,6 +14,9 @@ import type { RegistryOptions, ExtensionInfo, RegistryLogger } from './types.js'
 import { CHANNEL_CATALOG, getChannelEntries } from './channel-registry.js';
 import { PROVIDER_CATALOG, getProviderEntries } from './provider-registry.js';
 import { TOOL_CATALOG } from './tool-registry.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface ExtensionPackManifestEntry {
   package?: string;
@@ -31,16 +34,38 @@ interface ExtensionManifest {
     tools?: Record<string, { enabled?: boolean; priority?: number }>;
   };
 }
+/**
+ * Whether a package can be resolved from this module.
+ *
+ * Node defines `import.meta.resolve` (20.6+), which honours the package's
+ * `exports` map and handles packages that only export an "import" condition.
+ * Test runners that transform modules (vitest's vite-node) do not define it;
+ * there the lookup walks up the directory tree for
+ * `node_modules/<name>/package.json`, which is how Node locates a package.
+ */
 function isPackageInstalled(packageName: string): boolean {
   if (!packageName) return false;
 
-  // Use import.meta.resolve (sync in Node 20.6+) for ESM-native resolution.
-  // This correctly handles packages that only export "import" conditions.
-  try {
-    import.meta.resolve(packageName);
-    return true;
-  } catch {
-    return false;
+  if (typeof import.meta.resolve === 'function') {
+    try {
+      import.meta.resolve(packageName);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return findInstalledPackageJson(packageName) !== null;
+}
+
+/** Walks up from this module's directory looking for an installed package. */
+function findInstalledPackageJson(packageName: string): string | null {
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  for (;;) {
+    const candidate = path.join(dir, 'node_modules', ...packageName.split('/'), 'package.json');
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
   }
 }
 
