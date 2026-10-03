@@ -182,6 +182,9 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
   const productivityEntries = TOOL_CATALOG.filter((t) => t.category === 'productivity');
   const cloudEntries = TOOL_CATALOG.filter((t) => t.category === 'cloud');
   const domainEntries = TOOL_CATALOG.filter((t) => t.category === 'domain');
+  // Research-category packs (citation-verifier, trulia-search) are opt-in:
+  // they load when a caller names them in `tools`, and stay out of `'all'`.
+  const researchEntries = TOOL_CATALOG.filter((t) => (t.category as string) === 'research');
 
   // ── Tool Extensions ──
   const toolFilter = options?.tools ?? 'all';
@@ -190,7 +193,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
       ? []
       : toolFilter === 'all'
         ? toolOnlyEntries
-        : toolOnlyEntries.filter((t) => toolFilter.includes(t.name));
+        : [...toolOnlyEntries, ...researchEntries].filter((t) => toolFilter.includes(t.name));
 
   for (const entry of filteredTools) {
     await loadEntry(entry);

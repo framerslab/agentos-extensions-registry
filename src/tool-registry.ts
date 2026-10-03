@@ -314,11 +314,11 @@ export const TOOL_CATALOG: ExtensionInfo[] = [
     category: 'tool',
     displayName: 'Web Search',
     description:
-      'Web search using SearXNG or DuckDuckGo by default; optional Serper/Brave API key for enhanced results.',
+      'Web search using SearXNG or DuckDuckGo by default; optional Serper, Tavily, Firecrawl, Brave or SerpAPI key for better results.',
     requiredSecrets: [],
     defaultPriority: 20,
     available: false,
-    envVars: ['SERPER_API_KEY', 'BRAVE_API_KEY'],
+    envVars: ['SERPER_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'BRAVE_API_KEY', 'SERPAPI_API_KEY'],
     docsUrl: 'https://serper.dev/api-key',
   },
   {
