@@ -57,16 +57,40 @@ function isPackageInstalled(packageName: string): boolean {
   return findInstalledPackageJson(packageName) !== null;
 }
 
-/** Walks up from this module's directory looking for an installed package. */
+/**
+ * Walks up from this module's directory looking for an installed package whose
+ * entry file exists, which is what `import.meta.resolve` checks: a package that
+ * was published without its build output is not installed in any useful sense.
+ */
 function findInstalledPackageJson(packageName: string): string | null {
   let dir = path.dirname(fileURLToPath(import.meta.url));
   for (;;) {
     const candidate = path.join(dir, 'node_modules', ...packageName.split('/'), 'package.json');
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(candidate)) {
+      return fs.existsSync(path.join(path.dirname(candidate), entryFileOf(candidate))) ? candidate : null;
+    }
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
+}
+
+/** The relative entry file a package's manifest points at (exports ".", then main, then index.js). */
+function entryFileOf(packageJsonPath: string): string {
+  let manifest: any = {};
+  try {
+    manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  } catch {
+    return 'index.js';
+  }
+  let target: unknown = manifest.exports?.['.'] ?? manifest.exports;
+  // Conditions nest at most one level in the packs this registry lists.
+  for (let depth = 0; depth < 2 && target && typeof target === 'object'; depth += 1) {
+    const conditions = target as Record<string, unknown>;
+    target = conditions.import ?? conditions.default ?? conditions.require ?? conditions.node;
+  }
+  if (typeof target === 'string') return target;
+  return typeof manifest.main === 'string' ? manifest.main : 'index.js';
 }
 
 function isEntryAvailable(entry: ExtensionInfo): boolean {
@@ -155,11 +179,18 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         (override?.options as Record<string, unknown> | undefined)?.priority ?? effectivePriority,
     };
 
-    // Prefer npm package over local createPack proxy (npm works outside monorepo)
-    if (entry.packageName && isPackageInstalled(entry.packageName)) {
-      // Fall through to packageName-based loading below
-    } else if (entry.createPack) {
-      // Fallback to local proxy (monorepo development only)
+    // Prefer the npm package when it is installed AND exports a pack factory;
+    // a package that is installed but is not an extension pack (the built-in
+    // AgentOS packs point at '@framers/agentos' and carry their own
+    // `createPack`) or whose entry cannot be loaded falls back to the local
+    // factory.
+    const mod = entry.packageName && isPackageInstalled(entry.packageName)
+      ? await tryImport(entry.packageName)
+      : null;
+    const factory = mod?.createExtensionPack ?? mod?.default?.createExtensionPack ?? mod?.default;
+
+    if (typeof factory !== 'function') {
+      if (!entry.createPack) return;
       packs.push({
         factory: () =>
           entry.createPack?.({
@@ -173,15 +204,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         options: effectiveOptions,
       });
       return;
-    } else if (!isPackageInstalled(entry.packageName)) {
-      return;
     }
-
-    const mod = await tryImport(entry.packageName);
-    if (!mod) return;
-
-    const factory = mod.createExtensionPack ?? mod.default?.createExtensionPack ?? mod.default;
-    if (typeof factory !== 'function') return;
 
     packs.push({
       factory: () =>

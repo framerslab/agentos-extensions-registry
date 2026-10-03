@@ -31,8 +31,13 @@ describe('AgentOS integration', () => {
       const manager = new ExtensionManager({ manifest });
       await manager.loadManifest();
 
+      // Descriptors are keyed by their id, which the published 1.0.0 pack sets
+      // to 'giphySearch' and the source sets to the tool name; the tool itself
+      // is 'giphy_search' in both.
       const toolRegistry = manager.getRegistry<any>(EXTENSION_KIND_TOOL);
-      expect(toolRegistry.getActive('giphy_search')).toBeDefined();
+      const active = toolRegistry.listActive() as Array<{ id: string; payload?: { name?: string } }>;
+      const giphy = active.find((entry) => entry.id === 'giphy_search' || entry.payload?.name === 'giphy_search');
+      expect(giphy, `active tools: ${active.map((entry) => entry.id).join(', ')}`).toBeDefined();
     } finally {
       if (prev === undefined) {
         delete process.env.GIPHY_API_KEY;

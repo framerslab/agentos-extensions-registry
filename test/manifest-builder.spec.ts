@@ -458,16 +458,20 @@ describe('getAvailableChannels', () => {
 
   it('marks a channel available when it is resolvable', async () => {
     const channels = await getAvailableChannels();
+    // vitest's module runner does not define import.meta.resolve; the channel
+    // packs have no `exports` map, so require.resolve answers the same question.
+    const nodeRequire = createRequire(import.meta.url);
 
     for (const ch of channels) {
       let resolvable = false;
       try {
-        import.meta.resolve(ch.packageName);
+        if (typeof import.meta.resolve === 'function') import.meta.resolve(ch.packageName);
+        else nodeRequire.resolve(ch.packageName);
         resolvable = true;
       } catch {
         resolvable = false;
       }
-      expect(ch.available).toBe(resolvable);
+      expect(ch.available, `${ch.packageName} available`).toBe(resolvable);
     }
   });
 
