@@ -9,10 +9,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { createCuratedManifest } from '../src/index';
-// Import AgentOS sources directly so tests validate the current workspace code,
-// even when `@framers/agentos/dist` has not been rebuilt yet.
-import { ExtensionManager } from '../../agentos/src/extensions/ExtensionManager.ts';
-import { EXTENSION_KIND_TOOL } from '../../agentos/src/extensions/types.ts';
+// The published package is the contract a standalone checkout and every
+// consumer resolve, so the integration test uses it too.
+import { EXTENSION_KIND_TOOL, ExtensionManager } from '@framers/agentos/extensions';
 
 describe('AgentOS integration', () => {
   it('loads secret-gated tools when secrets are provided in the manifest', async () => {
