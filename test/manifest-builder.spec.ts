@@ -4,6 +4,7 @@
  * and getAvailableChannels from the extensions registry.
  */
 
+import { createRequire } from 'node:module';
 import { describe, it, expect, vi } from 'vitest';
 import {
   createCuratedManifest,
