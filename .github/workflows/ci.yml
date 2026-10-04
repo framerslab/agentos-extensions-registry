@@ -19,6 +19,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm build
       - run: pnpm test
+      - name: Availability matches what can load (plain Node)
+        run: pnpm run check:availability
       - name: Packed tarball ships the capability catalog
         run: pnpm run check:pack
       - name: Optional dependency ranges resolve to published packs with code

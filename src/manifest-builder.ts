@@ -35,21 +35,26 @@ interface ExtensionManifest {
   };
 }
 /**
- * Whether a package can be resolved from this module.
+ * Whether a package is installed and its entry file is on disk.
  *
  * Node defines `import.meta.resolve` (20.6+), which honours the package's
  * `exports` map and handles packages that only export an "import" condition.
- * Test runners that transform modules (vitest's vite-node) do not define it;
- * there the lookup walks up the directory tree for
- * `node_modules/<name>/package.json`, which is how Node locates a package.
+ * It resolves without checking that the file exists, so the result is checked
+ * here: a package published without its build output is not installed in any
+ * useful sense. Test runners that transform modules (vitest's vite-node) do
+ * not define `import.meta.resolve`; there the lookup walks up the directory
+ * tree for `node_modules/<name>/package.json`, which is how Node locates a
+ * package, and applies the same entry-file check.
  */
 function isPackageInstalled(packageName: string): boolean {
   if (!packageName) return false;
 
   if (typeof import.meta.resolve === 'function') {
     try {
-      import.meta.resolve(packageName);
-      return true;
+      const resolved = import.meta.resolve(packageName);
+      // Node resolves a package's entry without checking that the file is on
+      // disk, so a package published without its build output still resolves.
+      return !resolved.startsWith('file:') || fs.existsSync(fileURLToPath(resolved));
     } catch {
       return false;
     }
@@ -59,15 +64,15 @@ function isPackageInstalled(packageName: string): boolean {
 
 /**
  * Walks up from this module's directory looking for an installed package whose
- * entry file exists, which is what `import.meta.resolve` checks: a package that
- * was published without its build output is not installed in any useful sense.
+ * entry file exists.
  */
 function findInstalledPackageJson(packageName: string): string | null {
   let dir = path.dirname(fileURLToPath(import.meta.url));
   for (;;) {
     const candidate = path.join(dir, 'node_modules', ...packageName.split('/'), 'package.json');
     if (fs.existsSync(candidate)) {
-      return fs.existsSync(path.join(path.dirname(candidate), entryFileOf(candidate))) ? candidate : null;
+      const entry = entryFileOf(candidate);
+      return entry !== null && fs.existsSync(path.join(path.dirname(candidate), entry)) ? candidate : null;
     }
     const parent = path.dirname(dir);
     if (parent === dir) return null;
@@ -75,22 +80,55 @@ function findInstalledPackageJson(packageName: string): string | null {
   }
 }
 
-/** The relative entry file a package's manifest points at (exports ".", then main, then index.js). */
-function entryFileOf(packageJsonPath: string): string {
+/** The conditions Node applies when a package is loaded with `import`. */
+const IMPORT_CONDITIONS = new Set(['import', 'node', 'module-sync', 'node-addons', 'default']);
+
+/**
+ * Follows an `exports` target down to a file path the way Node does: a string
+ * is the path, an array is a list of fallbacks, and a conditions object yields
+ * the first key, in the package's own order, that is an active condition.
+ */
+function resolveExportTarget(target: unknown, depth: number): string | undefined {
+  if (typeof target === 'string') return target;
+  if (depth === 0 || !target || typeof target !== 'object') return undefined;
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      const resolved = resolveExportTarget(item, depth - 1);
+      if (resolved) return resolved;
+    }
+    return undefined;
+  }
+  for (const [condition, value] of Object.entries(target as Record<string, unknown>)) {
+    if (!IMPORT_CONDITIONS.has(condition)) continue;
+    const resolved = resolveExportTarget(value, depth - 1);
+    if (resolved) return resolved;
+  }
+  return undefined;
+}
+
+/**
+ * The file `import` loads for an installed package, relative to its directory.
+ * A package with an `exports` field is resolved through it alone (Node does
+ * not fall back to `main`), so a map without a root entry for `import` gives
+ * null. Without `exports` the entry is `main`, then `index.js`.
+ */
+function entryFileOf(packageJsonPath: string): string | null {
   let manifest: any = {};
   try {
     manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   } catch {
-    return 'index.js';
+    return null;
   }
-  let target: unknown = manifest.exports?.['.'] ?? manifest.exports;
-  // Conditions nest at most one level in the packs this registry lists.
-  for (let depth = 0; depth < 2 && target && typeof target === 'object'; depth += 1) {
-    const conditions = target as Record<string, unknown>;
-    target = conditions.import ?? conditions.default ?? conditions.require ?? conditions.node;
+  const exported: unknown = manifest.exports;
+  if (exported !== undefined && exported !== null) {
+    let target: unknown = exported;
+    if (typeof exported === 'object' && !Array.isArray(exported)) {
+      const hasSubpaths = Object.keys(exported as object).some((key) => key.startsWith('.'));
+      if (hasSubpaths) target = (exported as Record<string, unknown>)['.'];
+    }
+    return resolveExportTarget(target, 4) ?? null;
   }
-  if (typeof target === 'string') return target;
-  return typeof manifest.main === 'string' ? manifest.main : 'index.js';
+  return typeof manifest.main === 'string' && manifest.main ? manifest.main : 'index.js';
 }
 
 /**

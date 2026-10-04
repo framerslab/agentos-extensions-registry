@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, it } from 'vitest';
 
-import { entryPathOf, inspectPack } from '../scripts/published-ranges-lib.mjs';
+import { compareVersions, entryPathOf, inspectPack, newestVersion } from '../scripts/published-ranges-lib.mjs';
 
 describe('entryPathOf', () => {
   it('reads the import condition of the "." export', () => {
@@ -12,6 +12,11 @@ describe('entryPathOf', () => {
     expect(entryPathOf(manifest)).toBe('dist/index.js');
   });
 
+  it('takes conditions in the order the package declares them', () => {
+    expect(entryPathOf({ exports: { node: './node.js', default: './fallback.js' } })).toBe('node.js');
+    expect(entryPathOf({ exports: { default: './fallback.js', node: './node.js' } })).toBe('fallback.js');
+  });
+
   it('follows nested conditions and fallback arrays', () => {
     expect(entryPathOf({ exports: { '.': { node: { import: './lib/node.mjs' } } } })).toBe('lib/node.mjs');
     expect(entryPathOf({ exports: { '.': [{ import: './esm/index.js' }, './cjs/index.js'] } })).toBe('esm/index.js');
@@ -19,12 +24,16 @@ describe('entryPathOf', () => {
 
   it('treats exports without subpath keys as the root target', () => {
     expect(entryPathOf({ exports: './main.js' })).toBe('main.js');
-    expect(entryPathOf({ exports: { import: './esm.js', require: './cjs.js' } })).toBe('esm.js');
+    expect(entryPathOf({ exports: { require: './cjs.js', import: './esm.js' } })).toBe('esm.js');
   });
 
-  it('falls back to main, then to index.js', () => {
+  it('gives no entry when exports has no root entry that import can load, even with a main', () => {
+    expect(entryPathOf({ exports: { './feature': './feature.js' }, main: 'lib/main.js' })).toBeNull();
+    expect(entryPathOf({ exports: { '.': { require: './cjs.js' } }, main: 'cjs.js' })).toBeNull();
+  });
+
+  it('uses main, then index.js, only when there is no exports field', () => {
     expect(entryPathOf({ main: './dist/index.js' })).toBe('dist/index.js');
-    expect(entryPathOf({ exports: { './feature': './feature.js' }, main: 'lib/main.js' })).toBe('lib/main.js');
     expect(entryPathOf({})).toBe('index.js');
     expect(entryPathOf(undefined)).toBe('index.js');
   });
@@ -48,6 +57,15 @@ describe('inspectPack', () => {
     expect(inspectPack({ files, manifest })).toEqual({ ok: false, reason: 'no-entry', entry: 'dist/index.js' });
   });
 
+  it('rejects a package whose exports map has no root entry, whatever the tarball holds', () => {
+    const files = ['feature.js', 'lib/main.js', 'package.json'];
+    expect(inspectPack({ files, manifest: { exports: { './feature': './feature.js' }, main: 'lib/main.js' } })).toEqual({
+      ok: false,
+      reason: 'no-root-export',
+      entry: null,
+    });
+  });
+
   it('fails closed when the file list is missing, empty or malformed', () => {
     for (const files of [undefined, null, [], 'dist/index.js', [undefined], [{ path: 'dist/index.js' }]]) {
       expect(inspectPack({ files, manifest }), JSON.stringify(files)).toEqual({
@@ -56,5 +74,20 @@ describe('inspectPack', () => {
         entry: 'dist/index.js',
       });
     }
+  });
+});
+
+describe('newestVersion', () => {
+  it('picks the highest version whatever the order of the list', () => {
+    expect(newestVersion(['0.9.9', '0.10.0', '0.1.0'])).toBe('0.10.0');
+    expect(newestVersion(['1.2.0', '1.1.1'])).toBe('1.2.0');
+    expect(newestVersion(['2.0.0'])).toBe('2.0.0');
+    expect(newestVersion([])).toBeUndefined();
+  });
+
+  it('ranks a release above its own pre-releases', () => {
+    expect(newestVersion(['1.0.0-beta.2', '1.0.0', '1.0.0-beta.1'])).toBe('1.0.0');
+    expect(compareVersions('1.0.0-beta.1', '1.0.0-beta.2')).toBe(-1);
+    expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
   });
 });

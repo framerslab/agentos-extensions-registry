@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
-import { inspectPack } from './published-ranges-lib.mjs';
+import { inspectPack, newestVersion } from './published-ranges-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,10 +59,12 @@ async function resolveRange(name, range) {
     return { name, range, error: firstLine(error) };
   }
   if (view === undefined) return { name, range, error: 'no published version satisfies the range' };
-  // One match is an object; several matches are an array in ascending order.
+  // One match is an object; several matches are an array in the order the
+  // registry lists them, so the newest is picked by version, not by position.
   // npm prints the bare value when a version carries only one of the fields.
-  const last = Array.isArray(view) ? view[view.length - 1] : view;
-  const newest = typeof last === 'string' ? { version: last } : last;
+  const matches = (Array.isArray(view) ? view : [view]).map((item) => (typeof item === 'string' ? { version: item } : item));
+  const highest = newestVersion(matches.map((item) => item?.version));
+  const newest = matches.find((item) => item?.version === highest);
   if (!newest || typeof newest.version !== 'string') {
     return { name, range, error: 'npm returned no version for the range' };
   }
@@ -102,6 +104,12 @@ for (const result of results) {
   }
   if (inspection.reason === 'no-file-list') {
     failures.push(`${label}: resolves to ${result.version}, whose file list npm did not return, so it is not shown to ship code`);
+    continue;
+  }
+  if (inspection.reason === 'no-root-export') {
+    // Not something a republish of the same source fixes, so the known-empty
+    // list does not excuse it.
+    failures.push(`${label}: resolves to ${result.version}, whose exports map has no root entry for import, so the package cannot be imported by name`);
     continue;
   }
   if (!listed) {
