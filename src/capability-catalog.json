@@ -1019,7 +1019,8 @@
       "gmailSendMessage",
       "gmailReplyMessage",
       "gmailSearchMessages",
-      "gmailListLabels"
+      "gmailListLabels",
+      "gmailService"
     ],
     "requiredSecrets": [
       "google.clientId",
@@ -1095,7 +1096,8 @@
       "researchAcademic",
       "researchScrape",
       "researchAggregate",
-      "researchTrending"
+      "researchTrending",
+      "deepResearch"
     ],
     "requiredSecrets": [
       "serper.apiKey"
