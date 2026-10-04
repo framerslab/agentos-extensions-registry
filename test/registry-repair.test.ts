@@ -1,7 +1,9 @@
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { CAPABILITY_CATALOG } from '../src/capability-catalog';
-import { createCuratedManifest } from '../src/index';
+import { createCuratedManifest, getAvailableExtensions } from '../src/index';
 import { getSecretEnvVar } from '../src/secret-env-map';
 import { TOOL_CATALOG } from '../src/tool-registry';
 
@@ -29,10 +31,16 @@ describe('committed capability catalog', () => {
 });
 
 describe('research-category catalog entries', () => {
-  it('load when they are named in tools', async () => {
-    const manifest = await toolsOnly(['citation-verifier']);
+  it('are registered when named in tools, exactly where they can load', async () => {
+    const available = new Map((await getAvailableExtensions()).map((entry) => [entry.name, entry.available]));
+    const manifest = await toolsOnly(['citation-verifier', 'trulia-search']);
     const identifiers = manifest.packs.map((pack: any) => pack.identifier);
-    expect(identifiers).toContain('registry:citation-verifier');
+    for (const name of ['citation-verifier', 'trulia-search']) {
+      expect(identifiers.includes(`registry:${name}`), name).toBe(available.get(name));
+    }
+    // trulia-search is a devDependency of this package, so one research pack
+    // takes the real load path on every run.
+    expect(available.get('trulia-search')).toBe(true);
   });
 
   it('are not part of tools: all', async () => {
@@ -40,6 +48,16 @@ describe('research-category catalog entries', () => {
     const identifiers = manifest.packs.map((pack: any) => pack.identifier);
     expect(identifiers).not.toContain('registry:citation-verifier');
     expect(identifiers).not.toContain('registry:trulia-search');
+  });
+});
+
+describe('a pack backed by a sibling source checkout', () => {
+  it('reports through isAvailable() whether that checkout is present', () => {
+    const entry: any = TOOL_CATALOG.find((tool) => tool.name === 'citation-verifier');
+    const sibling = fileURLToPath(
+      new URL('../../agentos-extensions/registry/curated/research/citation-verifier/src/index.ts', import.meta.url),
+    );
+    expect(entry.createPack.isAvailable()).toBe(fs.existsSync(sibling));
   });
 });
 

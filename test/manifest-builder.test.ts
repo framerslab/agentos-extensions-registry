@@ -54,13 +54,6 @@ describe('getAvailableExtensions', () => {
     expect(categories.has('productivity')).toBe(true);
   });
 
-  it('should resolve locally linked productivity and image-generation extensions', async () => {
-    const extensions = await getAvailableExtensions();
-    expect(extensions.find((ext) => ext.name === 'image-generation')?.available).toBe(true);
-    expect(extensions.find((ext) => ext.name === 'email-gmail')?.available).toBe(true);
-    expect(extensions.find((ext) => ext.name === 'calendar-google')?.available).toBe(true);
-  });
-
   it('should expose API key guidance metadata for image-generation', async () => {
     const extensions = await getAvailableExtensions();
     const imageGeneration = extensions.find((ext) => ext.name === 'image-generation');
@@ -248,7 +241,13 @@ describe('createCuratedManifest manifest structure', () => {
     expect(manifest.overrides!.tools['voice-twilio'].enabled).toBe(false);
   });
 
-  it('should create manifest entries for local curated proxy packs', async () => {
+  it('should create manifest entries for local curated proxy packs exactly where they can load', async () => {
+    // These packs load from a sibling source checkout (the monorepo) or from
+    // their npm package once it ships its entry point. Where neither exists,
+    // the entry is reported unavailable and stays out of the manifest: a
+    // registered factory that throws on activation is worse than a skip.
+    const names = ['image-generation', 'calendar-google', 'email-gmail'];
+    const available = new Map((await getAvailableExtensions()).map((ext) => [ext.name, ext.available]));
     const manifest = await createCuratedManifest({
       tools: ['image-generation'],
       productivity: ['calendar-google', 'email-gmail'],
@@ -256,11 +255,12 @@ describe('createCuratedManifest manifest structure', () => {
       channels: 'none',
       cloud: 'none',
       domains: 'none',
+      logger: {},
     });
 
     const identifiers = manifest.packs.map((pack) => String(pack.identifier));
-    expect(identifiers).toContain('registry:image-generation');
-    expect(identifiers).toContain('registry:calendar-google');
-    expect(identifiers).toContain('registry:email-gmail');
+    for (const name of names) {
+      expect(identifiers.includes(`registry:${name}`), name).toBe(available.get(name));
+    }
   });
 });

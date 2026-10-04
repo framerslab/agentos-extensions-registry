@@ -10,6 +10,9 @@
  * @module @framers/agentos-extensions-registry/tools
  */
 
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import type { ExtensionInfo, RegistryPackContext } from './types.js';
 import {
   BuiltInAdaptiveVadProvider,
@@ -257,15 +260,26 @@ function createBuiltInSpeechRuntimePack(context: RegistryPackContext) {
   };
 }
 
+/** The files a local pack proxy tries, in order: the build output, then the source. */
+function localPackCandidates(relativePath: string): URL[] {
+  const distRelativePath = relativePath.replace(/\/src\/index\.(?:ts|js)$/, '/dist/index.js');
+  const sourceTsRelativePath = relativePath.replace(/\.js$/, '.ts');
+  return [
+    new URL(distRelativePath, import.meta.url),
+    new URL(relativePath, import.meta.url),
+    ...(sourceTsRelativePath !== relativePath ? [new URL(sourceTsRelativePath, import.meta.url)] : []),
+  ];
+}
+
+/**
+ * Builds a pack factory that imports the pack from a sibling
+ * `agentos-extensions` source checkout. That checkout exists in the monorepo
+ * and not in an npm install, so the factory carries `isAvailable()`; the
+ * manifest builder registers the factory only where it can run.
+ */
 function createLocalPackProxy(relativePath: string) {
-  return async (context: RegistryPackContext) => {
-    const distRelativePath = relativePath.replace(/\/src\/index\.(?:ts|js)$/, '/dist/index.js');
-    const sourceTsRelativePath = relativePath.replace(/\.js$/, '.ts');
-    const candidateUrls = [
-      new URL(distRelativePath, import.meta.url),
-      new URL(relativePath, import.meta.url),
-      ...(sourceTsRelativePath !== relativePath ? [new URL(sourceTsRelativePath, import.meta.url)] : []),
-    ];
+  const proxy = async (context: RegistryPackContext) => {
+    const candidateUrls = localPackCandidates(relativePath);
 
     let mod: any;
     let lastError: unknown;
@@ -291,6 +305,9 @@ function createLocalPackProxy(relativePath: string) {
       logger: context.logger,
     });
   };
+  proxy.isAvailable = (): boolean =>
+    localPackCandidates(relativePath).some((url) => fs.existsSync(fileURLToPath(url)));
+  return proxy;
 }
 
 /**

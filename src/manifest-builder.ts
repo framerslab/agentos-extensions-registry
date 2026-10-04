@@ -93,8 +93,20 @@ function entryFileOf(packageJsonPath: string): string {
   return typeof manifest.main === 'string' ? manifest.main : 'index.js';
 }
 
+/**
+ * Whether an entry carries a factory that can run in this installation.
+ *
+ * The built-in AgentOS packs ship their own `createPack` and always can. A
+ * factory backed by a sibling source checkout says so through `isAvailable()`;
+ * an npm install has no such checkout, and calling the factory there throws.
+ */
+function hasUsableLocalFactory(entry: ExtensionInfo): boolean {
+  if (typeof entry.createPack !== 'function') return false;
+  return typeof entry.createPack.isAvailable === 'function' ? entry.createPack.isAvailable() : true;
+}
+
 function isEntryAvailable(entry: ExtensionInfo): boolean {
-  if (typeof entry.createPack === 'function') return true;
+  if (hasUsableLocalFactory(entry)) return true;
   return isPackageInstalled(entry.packageName);
 }
 
@@ -136,7 +148,10 @@ export async function getAvailableChannels(): Promise<ExtensionInfo[]> {
 
 /**
  * Creates a pre-configured `ExtensionManifest` with all available curated
- * extensions. Missing optional dependencies are silently skipped.
+ * extensions. A pack that cannot load here (its npm package is not installed
+ * and no sibling source checkout provides it) is skipped. When the caller named
+ * that pack, a warning says which package to install; a pack swept in by
+ * `'all'` is skipped quietly.
  *
  * @example
  * ```typescript
@@ -165,8 +180,9 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
   const logger: RegistryLogger | undefined = options?.logger ?? console;
   const packs: ExtensionPackManifestEntry[] = [];
 
-  // Helper to load and push a catalog entry
-  const loadEntry = async (entry: ExtensionInfo) => {
+  // Helper to load and push a catalog entry. `named` is true when the caller
+  // listed the entry by name instead of asking for the whole category.
+  const loadEntry = async (entry: ExtensionInfo, named = false) => {
     const override = options?.overrides?.[entry.name];
     if (override?.enabled === false) return;
 
@@ -190,7 +206,16 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
     const factory = mod?.createExtensionPack ?? mod?.default?.createExtensionPack ?? mod?.default;
 
     if (typeof factory !== 'function') {
-      if (!entry.createPack) return;
+      if (!hasUsableLocalFactory(entry)) {
+        // Registering the entry anyway would hand AgentOS a factory that
+        // throws when the pack is activated.
+        if (named) {
+          logger?.warn?.(
+            `[agentos-extensions-registry] "${entry.name}" was requested but cannot load here: install ${entry.packageName} to enable it.`,
+          );
+        }
+        return;
+      }
       packs.push({
         factory: () =>
           entry.createPack?.({
@@ -244,7 +269,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : [...toolOnlyEntries, ...researchEntries].filter((t) => toolFilter.includes(t.name));
 
   for (const entry of filteredTools) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(toolFilter));
   }
 
   // ── Voice Provider Extensions ──
@@ -257,7 +282,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : voiceEntries.filter((t) => voiceFilter.includes(t.name));
 
   for (const entry of filteredVoice) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(voiceFilter));
   }
 
   // ── Productivity Extensions ──
@@ -270,7 +295,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : productivityEntries.filter((t) => prodFilter.includes(t.name));
 
   for (const entry of filteredProd) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(prodFilter));
   }
 
   // ── Cloud Provider Extensions ──
@@ -283,7 +308,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : cloudEntries.filter((t) => cloudFilter.includes(t.name));
 
   for (const entry of filteredCloud) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(cloudFilter));
   }
 
   // ── Domain Registrar Extensions ──
@@ -296,14 +321,14 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : domainEntries.filter((t) => domainFilter.includes(t.name));
 
   for (const entry of filteredDomains) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(domainFilter));
   }
 
   // ── Channel Extensions ──
   const channelEntries = getChannelEntries(options?.channels);
 
   for (const entry of channelEntries) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(options?.channels));
   }
 
   // ── Build Overrides ──
