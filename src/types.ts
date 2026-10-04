@@ -143,8 +143,21 @@ export interface ExtensionInfo {
    * Optional inline pack factory for built-in capabilities that do not live in
    * a standalone `@framers/agentos-ext-*` package.
    */
-  createPack?: (context: RegistryPackContext) => Promise<unknown> | unknown;
+  createPack?: RegistryPackFactory;
 }
+
+/**
+ * A pack factory carried by a catalog entry.
+ *
+ * A factory that imports its pack from a sibling `agentos-extensions` source
+ * checkout also carries `isAvailable()`, which reports whether that checkout is
+ * present. It is present in the monorepo and absent from an npm install, where
+ * calling the factory would throw. A factory without `isAvailable` (the
+ * built-in AgentOS packs) can always run.
+ */
+export type RegistryPackFactory = ((context: RegistryPackContext) => Promise<unknown> | unknown) & {
+  isAvailable?: () => boolean;
+};
 
 /**
  * Registry entry for a channel extension.

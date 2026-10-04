@@ -10,6 +10,9 @@
  * @module @framers/agentos-extensions-registry/tools
  */
 
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import type { ExtensionInfo, RegistryPackContext } from './types.js';
 import {
   BuiltInAdaptiveVadProvider,
@@ -257,15 +260,26 @@ function createBuiltInSpeechRuntimePack(context: RegistryPackContext) {
   };
 }
 
+/** The files a local pack proxy tries, in order: the build output, then the source. */
+function localPackCandidates(relativePath: string): URL[] {
+  const distRelativePath = relativePath.replace(/\/src\/index\.(?:ts|js)$/, '/dist/index.js');
+  const sourceTsRelativePath = relativePath.replace(/\.js$/, '.ts');
+  return [
+    new URL(distRelativePath, import.meta.url),
+    new URL(relativePath, import.meta.url),
+    ...(sourceTsRelativePath !== relativePath ? [new URL(sourceTsRelativePath, import.meta.url)] : []),
+  ];
+}
+
+/**
+ * Builds a pack factory that imports the pack from a sibling
+ * `agentos-extensions` source checkout. That checkout exists in the monorepo
+ * and not in an npm install, so the factory carries `isAvailable()`; the
+ * manifest builder registers the factory only where it can run.
+ */
 function createLocalPackProxy(relativePath: string) {
-  return async (context: RegistryPackContext) => {
-    const distRelativePath = relativePath.replace(/\/src\/index\.(?:ts|js)$/, '/dist/index.js');
-    const sourceTsRelativePath = relativePath.replace(/\.js$/, '.ts');
-    const candidateUrls = [
-      new URL(distRelativePath, import.meta.url),
-      new URL(relativePath, import.meta.url),
-      ...(sourceTsRelativePath !== relativePath ? [new URL(sourceTsRelativePath, import.meta.url)] : []),
-    ];
+  const proxy = async (context: RegistryPackContext) => {
+    const candidateUrls = localPackCandidates(relativePath);
 
     let mod: any;
     let lastError: unknown;
@@ -291,6 +305,9 @@ function createLocalPackProxy(relativePath: string) {
       logger: context.logger,
     });
   };
+  proxy.isAvailable = (): boolean =>
+    localPackCandidates(relativePath).some((url) => fs.existsSync(fileURLToPath(url)));
+  return proxy;
 }
 
 /**
@@ -314,11 +331,11 @@ export const TOOL_CATALOG: ExtensionInfo[] = [
     category: 'tool',
     displayName: 'Web Search',
     description:
-      'Web search using SearXNG or DuckDuckGo by default; optional Serper/Brave API key for enhanced results.',
+      'Web search using SearXNG or DuckDuckGo by default; optional Serper, Tavily, Firecrawl, Brave or SerpAPI key for better results.',
     requiredSecrets: [],
     defaultPriority: 20,
     available: false,
-    envVars: ['SERPER_API_KEY', 'BRAVE_API_KEY'],
+    envVars: ['SERPER_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'BRAVE_API_KEY', 'SERPAPI_API_KEY'],
     docsUrl: 'https://serper.dev/api-key',
   },
   {

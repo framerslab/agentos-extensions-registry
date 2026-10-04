@@ -4,10 +4,11 @@
  * Generate capability-catalog.json from all extension manifest.json files.
  *
  * Scans every manifest.json under `packages/agentos-extensions/registry/curated/`
- * and extracts a compact catalog entry: id, name, description, category, tools
- * (from extensions[].id), and requiredSecrets. The output file lives at
- * `packages/agentos-extensions-registry/src/capability-catalog.json` and is
- * imported by the TypeScript wrapper `capability-catalog.ts`.
+ * (or `CAPABILITY_CATALOG_EXTENSIONS_ROOT`) and extracts a compact catalog entry:
+ * id, name, description, category, tools (from extensions[].id), and
+ * requiredSecrets. The output file lives at `src/capability-catalog.json`
+ * (or `CAPABILITY_CATALOG_OUTPUT`) and is imported by `capability-catalog.ts`.
+ * When no manifests are found, the committed file is left untouched.
  *
  * Run manually:
  *   node scripts/generate-capability-catalog.mjs
@@ -22,8 +23,12 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packageRoot = path.resolve(__dirname, '..');
-const extensionsRoot = path.resolve(packageRoot, '..', 'agentos-extensions', 'registry', 'curated');
-const outputPath = path.join(packageRoot, 'src', 'capability-catalog.json');
+const extensionsRoot = process.env.CAPABILITY_CATALOG_EXTENSIONS_ROOT
+  ? path.resolve(process.env.CAPABILITY_CATALOG_EXTENSIONS_ROOT)
+  : path.resolve(packageRoot, '..', 'agentos-extensions', 'registry', 'curated');
+const outputPath = process.env.CAPABILITY_CATALOG_OUTPUT
+  ? path.resolve(process.env.CAPABILITY_CATALOG_OUTPUT)
+  : path.join(packageRoot, 'src', 'capability-catalog.json');
 
 /**
  * Recursively find all manifest.json files under a directory.
@@ -108,6 +113,14 @@ function extractEntry(manifest, manifestPath) {
 
 const manifests = findManifests(extensionsRoot);
 console.log(`Found ${manifests.length} manifest.json files under ${extensionsRoot}`);
+
+// A standalone checkout (CI, the release job, an npm install that runs
+// `prepare`) has no sibling agentos-extensions tree. Writing the empty result
+// would publish an empty catalog, so the committed snapshot stays as it is.
+if (manifests.length === 0) {
+  console.log(`Keeping the committed catalog at ${outputPath}.`);
+  process.exit(0);
+}
 
 const catalog = [];
 

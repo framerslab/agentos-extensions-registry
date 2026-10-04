@@ -25,6 +25,12 @@ export const SECRET_ENV_MAP: Record<string, SecretEnvMapping> = {
   // Search
   'serper.apiKey': { envVar: 'SERPER_API_KEY', signupUrl: 'https://serper.dev', freeTier: '2,500 queries free' },
   'brave.apiKey': { envVar: 'BRAVE_API_KEY', signupUrl: 'https://brave.com/search/api/', freeTier: '2,000 queries/mo free' },
+  'tavily.apiKey': { envVar: 'TAVILY_API_KEY', signupUrl: 'https://app.tavily.com', freeTier: '1,000 credits/mo free' },
+  'firecrawl.apiKey': { envVar: 'FIRECRAWL_API_KEY', signupUrl: 'https://www.firecrawl.dev/app/api-keys', freeTier: '1,000 credits/mo free' },
+  'serpapi.apiKey': { envVar: 'SERPAPI_API_KEY', signupUrl: 'https://serpapi.com/manage-api-key', freeTier: '250 searches/mo free' },
+
+  // Rerank
+  'cohere.apiKey': { envVar: 'COHERE_API_KEY', signupUrl: 'https://dashboard.cohere.com/api-keys', freeTier: 'trial key free' },
 
   // Core AI providers
   'openai.apiKey': { envVar: 'OPENAI_API_KEY', signupUrl: 'https://platform.openai.com/api-keys' },
@@ -46,6 +52,7 @@ export const SECRET_ENV_MAP: Record<string, SecretEnvMapping> = {
   'elevenlabs.apiKey': { envVar: 'ELEVENLABS_API_KEY', signupUrl: 'https://elevenlabs.io', freeTier: '10k chars/mo free' },
   'twilio.accountSid': { envVar: 'TWILIO_ACCOUNT_SID', signupUrl: 'https://console.twilio.com' },
   'twilio.authToken': { envVar: 'TWILIO_AUTH_TOKEN', signupUrl: 'https://console.twilio.com' },
+  'twilio.phoneNumber': { envVar: 'TWILIO_PHONE_NUMBER', signupUrl: 'https://console.twilio.com/us1/develop/phone-numbers/manage/incoming' },
   'telnyx.apiKey': { envVar: 'TELNYX_API_KEY', signupUrl: 'https://portal.telnyx.com' },
   'telnyx.connectionId': { envVar: 'TELNYX_CONNECTION_ID', signupUrl: 'https://portal.telnyx.com' },
   'plivo.authId': { envVar: 'PLIVO_AUTH_ID', signupUrl: 'https://console.plivo.com' },
@@ -161,7 +168,10 @@ export function getApiKeyGuidance(errorMessage: string, toolName?: string): stri
     if (n.includes('search') || n.includes('web')) {
       lines.push('For web search, set one of:');
       lines.push('  - SERPER_API_KEY (2,500 queries free) → https://serper.dev');
+      lines.push('  - TAVILY_API_KEY (1,000 credits/mo free) → https://app.tavily.com');
+      lines.push('  - FIRECRAWL_API_KEY (1,000 credits/mo free) → https://www.firecrawl.dev/app/api-keys');
       lines.push('  - BRAVE_API_KEY (2,000 queries/mo free) → https://brave.com/search/api/');
+      lines.push('  - SERPAPI_API_KEY (250 searches/mo free) → https://serpapi.com/manage-api-key');
     }
   }
 

@@ -14,6 +14,9 @@ import type { RegistryOptions, ExtensionInfo, RegistryLogger } from './types.js'
 import { CHANNEL_CATALOG, getChannelEntries } from './channel-registry.js';
 import { PROVIDER_CATALOG, getProviderEntries } from './provider-registry.js';
 import { TOOL_CATALOG } from './tool-registry.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface ExtensionPackManifestEntry {
   package?: string;
@@ -31,21 +34,121 @@ interface ExtensionManifest {
     tools?: Record<string, { enabled?: boolean; priority?: number }>;
   };
 }
+/**
+ * Whether a package is installed and its entry file is on disk.
+ *
+ * Node defines `import.meta.resolve` (20.6+), which honours the package's
+ * `exports` map and handles packages that only export an "import" condition.
+ * It resolves without checking that the file exists, so the result is checked
+ * here: a package published without its build output is not installed in any
+ * useful sense. Test runners that transform modules (vitest's vite-node) do
+ * not define `import.meta.resolve`; there the lookup walks up the directory
+ * tree for `node_modules/<name>/package.json`, which is how Node locates a
+ * package, and applies the same entry-file check.
+ */
 function isPackageInstalled(packageName: string): boolean {
   if (!packageName) return false;
 
-  // Use import.meta.resolve (sync in Node 20.6+) for ESM-native resolution.
-  // This correctly handles packages that only export "import" conditions.
-  try {
-    import.meta.resolve(packageName);
-    return true;
-  } catch {
-    return false;
+  if (typeof import.meta.resolve === 'function') {
+    try {
+      const resolved = import.meta.resolve(packageName);
+      // Node resolves a package's entry without checking that the file is on
+      // disk, so a package published without its build output still resolves.
+      return !resolved.startsWith('file:') || fs.existsSync(fileURLToPath(resolved));
+    } catch {
+      return false;
+    }
+  }
+  return findInstalledPackageJson(packageName) !== null;
+}
+
+/**
+ * Walks up from this module's directory looking for an installed package whose
+ * entry file exists.
+ */
+function findInstalledPackageJson(packageName: string): string | null {
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  for (;;) {
+    const candidate = path.join(dir, 'node_modules', ...packageName.split('/'), 'package.json');
+    if (fs.existsSync(candidate)) {
+      const entry = entryFileOf(candidate);
+      return entry !== null && fs.existsSync(path.join(path.dirname(candidate), entry)) ? candidate : null;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
   }
 }
 
+/** The conditions Node applies when a package is loaded with `import`. */
+const IMPORT_CONDITIONS = new Set(['import', 'node', 'module-sync', 'node-addons', 'default']);
+
+/**
+ * Follows an `exports` target down to a file path the way Node does: a string
+ * is the path, an array is a list of fallbacks, and a conditions object yields
+ * the first key, in the package's own order, that is an active condition. A
+ * `null` target blocks the path (returned as null); undefined means nothing
+ * matched.
+ */
+function resolveExportTarget(target: unknown, depth: number): string | null | undefined {
+  if (typeof target === 'string') return target;
+  if (target === null) return null;
+  if (depth === 0 || typeof target !== 'object') return undefined;
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      const resolved = resolveExportTarget(item, depth - 1);
+      if (resolved !== undefined) return resolved;
+    }
+    return undefined;
+  }
+  for (const [condition, value] of Object.entries(target as Record<string, unknown>)) {
+    if (!IMPORT_CONDITIONS.has(condition)) continue;
+    const resolved = resolveExportTarget(value, depth - 1);
+    if (resolved !== undefined) return resolved;
+  }
+  return undefined;
+}
+
+/**
+ * The file `import` loads for an installed package, relative to its directory.
+ * A package with an `exports` field is resolved through it alone (Node does
+ * not fall back to `main`), so a map without a root entry for `import` gives
+ * null. Without `exports` the entry is `main`, then `index.js`.
+ */
+function entryFileOf(packageJsonPath: string): string | null {
+  let manifest: any = {};
+  try {
+    manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  } catch {
+    return null;
+  }
+  const exported: unknown = manifest.exports;
+  if (exported !== undefined && exported !== null) {
+    let target: unknown = exported;
+    if (typeof exported === 'object' && !Array.isArray(exported)) {
+      const hasSubpaths = Object.keys(exported as object).some((key) => key.startsWith('.'));
+      if (hasSubpaths) target = (exported as Record<string, unknown>)['.'];
+    }
+    const resolved = resolveExportTarget(target, 4);
+    return typeof resolved === 'string' && resolved ? resolved : null;
+  }
+  return typeof manifest.main === 'string' && manifest.main ? manifest.main : 'index.js';
+}
+
+/**
+ * Whether an entry carries a factory that can run in this installation.
+ *
+ * The built-in AgentOS packs ship their own `createPack` and always can. A
+ * factory backed by a sibling source checkout says so through `isAvailable()`;
+ * an npm install has no such checkout, and calling the factory there throws.
+ */
+function hasUsableLocalFactory(entry: ExtensionInfo): boolean {
+  if (typeof entry.createPack !== 'function') return false;
+  return typeof entry.createPack.isAvailable === 'function' ? entry.createPack.isAvailable() : true;
+}
+
 function isEntryAvailable(entry: ExtensionInfo): boolean {
-  if (typeof entry.createPack === 'function') return true;
+  if (hasUsableLocalFactory(entry)) return true;
   return isPackageInstalled(entry.packageName);
 }
 
@@ -87,7 +190,10 @@ export async function getAvailableChannels(): Promise<ExtensionInfo[]> {
 
 /**
  * Creates a pre-configured `ExtensionManifest` with all available curated
- * extensions. Missing optional dependencies are silently skipped.
+ * extensions. A pack that cannot load here (its npm package is not installed
+ * and no sibling source checkout provides it) is skipped. When the caller named
+ * that pack, a warning says which package to install; a pack swept in by
+ * `'all'` is skipped quietly.
  *
  * @example
  * ```typescript
@@ -116,8 +222,9 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
   const logger: RegistryLogger | undefined = options?.logger ?? console;
   const packs: ExtensionPackManifestEntry[] = [];
 
-  // Helper to load and push a catalog entry
-  const loadEntry = async (entry: ExtensionInfo) => {
+  // Helper to load and push a catalog entry. `named` is true when the caller
+  // listed the entry by name instead of asking for the whole category.
+  const loadEntry = async (entry: ExtensionInfo, named = false) => {
     const override = options?.overrides?.[entry.name];
     if (override?.enabled === false) return;
 
@@ -130,11 +237,27 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         (override?.options as Record<string, unknown> | undefined)?.priority ?? effectivePriority,
     };
 
-    // Prefer npm package over local createPack proxy (npm works outside monorepo)
-    if (entry.packageName && isPackageInstalled(entry.packageName)) {
-      // Fall through to packageName-based loading below
-    } else if (entry.createPack) {
-      // Fallback to local proxy (monorepo development only)
+    // Prefer the npm package when it is installed AND exports a pack factory;
+    // a package that is installed but is not an extension pack (the built-in
+    // AgentOS packs point at '@framers/agentos' and carry their own
+    // `createPack`) or whose entry cannot be loaded falls back to the local
+    // factory.
+    const mod = entry.packageName && isPackageInstalled(entry.packageName)
+      ? await tryImport(entry.packageName)
+      : null;
+    const factory = mod?.createExtensionPack ?? mod?.default?.createExtensionPack ?? mod?.default;
+
+    if (typeof factory !== 'function') {
+      if (!hasUsableLocalFactory(entry)) {
+        // Registering the entry anyway would hand AgentOS a factory that
+        // throws when the pack is activated.
+        if (named) {
+          logger?.warn?.(
+            `[agentos-extensions-registry] "${entry.name}" was requested but cannot load here: install ${entry.packageName} to enable it.`,
+          );
+        }
+        return;
+      }
       packs.push({
         factory: () =>
           entry.createPack?.({
@@ -148,15 +271,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         options: effectiveOptions,
       });
       return;
-    } else if (!isPackageInstalled(entry.packageName)) {
-      return;
     }
-
-    const mod = await tryImport(entry.packageName);
-    if (!mod) return;
-
-    const factory = mod.createExtensionPack ?? mod.default?.createExtensionPack ?? mod.default;
-    if (typeof factory !== 'function') return;
 
     packs.push({
       factory: () =>
@@ -182,6 +297,9 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
   const productivityEntries = TOOL_CATALOG.filter((t) => t.category === 'productivity');
   const cloudEntries = TOOL_CATALOG.filter((t) => t.category === 'cloud');
   const domainEntries = TOOL_CATALOG.filter((t) => t.category === 'domain');
+  // Research-category packs (citation-verifier, trulia-search) are opt-in:
+  // they load when a caller names them in `tools`, and stay out of `'all'`.
+  const researchEntries = TOOL_CATALOG.filter((t) => (t.category as string) === 'research');
 
   // ── Tool Extensions ──
   const toolFilter = options?.tools ?? 'all';
@@ -190,10 +308,10 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
       ? []
       : toolFilter === 'all'
         ? toolOnlyEntries
-        : toolOnlyEntries.filter((t) => toolFilter.includes(t.name));
+        : [...toolOnlyEntries, ...researchEntries].filter((t) => toolFilter.includes(t.name));
 
   for (const entry of filteredTools) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(toolFilter));
   }
 
   // ── Voice Provider Extensions ──
@@ -206,7 +324,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : voiceEntries.filter((t) => voiceFilter.includes(t.name));
 
   for (const entry of filteredVoice) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(voiceFilter));
   }
 
   // ── Productivity Extensions ──
@@ -219,7 +337,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : productivityEntries.filter((t) => prodFilter.includes(t.name));
 
   for (const entry of filteredProd) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(prodFilter));
   }
 
   // ── Cloud Provider Extensions ──
@@ -232,7 +350,7 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : cloudEntries.filter((t) => cloudFilter.includes(t.name));
 
   for (const entry of filteredCloud) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(cloudFilter));
   }
 
   // ── Domain Registrar Extensions ──
@@ -245,14 +363,14 @@ export async function createCuratedManifest(options?: RegistryOptions): Promise<
         : domainEntries.filter((t) => domainFilter.includes(t.name));
 
   for (const entry of filteredDomains) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(domainFilter));
   }
 
   // ── Channel Extensions ──
   const channelEntries = getChannelEntries(options?.channels);
 
   for (const entry of channelEntries) {
-    await loadEntry(entry);
+    await loadEntry(entry, Array.isArray(options?.channels));
   }
 
   // ── Build Overrides ──
