@@ -20,5 +20,6 @@
   "@framers/agentos-ext-stealth-browser",
   "@framers/agentos-ext-voice-plivo",
   "@framers/agentos-ext-voice-telnyx",
-  "@framers/agentos-ext-voice-twilio"
+  "@framers/agentos-ext-voice-twilio",
+  "@framers/agentos-ext-weather"
 ]
