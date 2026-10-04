@@ -86,22 +86,25 @@ const IMPORT_CONDITIONS = new Set(['import', 'node', 'module-sync', 'node-addons
 /**
  * Follows an `exports` target down to a file path the way Node does: a string
  * is the path, an array is a list of fallbacks, and a conditions object yields
- * the first key, in the package's own order, that is an active condition.
+ * the first key, in the package's own order, that is an active condition. A
+ * `null` target blocks the path (returned as null); undefined means nothing
+ * matched.
  */
-function resolveExportTarget(target: unknown, depth: number): string | undefined {
+function resolveExportTarget(target: unknown, depth: number): string | null | undefined {
   if (typeof target === 'string') return target;
-  if (depth === 0 || !target || typeof target !== 'object') return undefined;
+  if (target === null) return null;
+  if (depth === 0 || typeof target !== 'object') return undefined;
   if (Array.isArray(target)) {
     for (const item of target) {
       const resolved = resolveExportTarget(item, depth - 1);
-      if (resolved) return resolved;
+      if (resolved !== undefined) return resolved;
     }
     return undefined;
   }
   for (const [condition, value] of Object.entries(target as Record<string, unknown>)) {
     if (!IMPORT_CONDITIONS.has(condition)) continue;
     const resolved = resolveExportTarget(value, depth - 1);
-    if (resolved) return resolved;
+    if (resolved !== undefined) return resolved;
   }
   return undefined;
 }
@@ -126,7 +129,8 @@ function entryFileOf(packageJsonPath: string): string | null {
       const hasSubpaths = Object.keys(exported as object).some((key) => key.startsWith('.'));
       if (hasSubpaths) target = (exported as Record<string, unknown>)['.'];
     }
-    return resolveExportTarget(target, 4) ?? null;
+    const resolved = resolveExportTarget(target, 4);
+    return typeof resolved === 'string' && resolved ? resolved : null;
   }
   return typeof manifest.main === 'string' && manifest.main ? manifest.main : 'index.js';
 }

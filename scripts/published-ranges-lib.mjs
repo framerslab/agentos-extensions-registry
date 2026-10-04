@@ -14,25 +14,28 @@ const ACTIVE_CONDITIONS = new Set(['import', 'node', 'module-sync', 'node-addons
  * Follows an `exports` target down to a file path the way Node does: a string
  * is the path, an array is a list of fallbacks, and a conditions object yields
  * the first key, in the package's own order, that is an active condition and
- * resolves.
+ * resolves. A `null` target blocks the path: Node stops there and does not try
+ * the conditions after it.
  * @param {unknown} target
  * @param {number} depth how many levels of nesting are still followed
- * @returns {string | undefined}
+ * @returns {string | null | undefined} a path, null when the path is blocked,
+ *   undefined when nothing matched
  */
 function resolveTarget(target, depth) {
   if (typeof target === 'string') return target;
-  if (depth === 0 || !target || typeof target !== 'object') return undefined;
+  if (target === null) return null;
+  if (depth === 0 || typeof target !== 'object') return undefined;
   if (Array.isArray(target)) {
     for (const item of target) {
       const resolved = resolveTarget(item, depth - 1);
-      if (resolved) return resolved;
+      if (resolved !== undefined) return resolved;
     }
     return undefined;
   }
   for (const [condition, value] of Object.entries(target)) {
     if (!ACTIVE_CONDITIONS.has(condition)) continue;
     const resolved = resolveTarget(value, depth - 1);
-    if (resolved) return resolved;
+    if (resolved !== undefined) return resolved;
   }
   return undefined;
 }
@@ -57,7 +60,7 @@ export function entryPathOf(manifest) {
       if (hasSubpaths) target = exported['.'];
     }
     const resolved = resolveTarget(target, 4);
-    return resolved ? resolved.replace(/^\.\//, '') : null;
+    return typeof resolved === 'string' && resolved ? resolved.replace(/^\.\//, '') : null;
   }
   const entry = typeof manifest?.main === 'string' && manifest.main ? manifest.main : 'index.js';
   return entry.replace(/^\.\//, '');
@@ -85,13 +88,38 @@ export function inspectPack({ files, manifest }) {
 }
 
 /**
- * Orders two versions of the form x.y.z or x.y.z-tag. A release sorts above
- * its own pre-releases; pre-release tags compare as text.
+ * Orders two pre-release tags by SemVer precedence: identifiers are compared
+ * left to right, numeric ones as numbers (beta.11 is above beta.2), a numeric
+ * identifier sorts below a textual one, and a tag that runs out first sorts
+ * lower.
+ * @returns {-1 | 0 | 1}
+ */
+function comparePrerelease(a, b) {
+  const [left, right] = [a.split('.'), b.split('.')];
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    if (left[index] === undefined) return -1;
+    if (right[index] === undefined) return 1;
+    const [leftNumeric, rightNumeric] = [/^\d+$/.test(left[index]), /^\d+$/.test(right[index])];
+    if (leftNumeric && rightNumeric) {
+      const difference = Number(left[index]) - Number(right[index]);
+      if (difference !== 0) return difference < 0 ? -1 : 1;
+    } else if (leftNumeric !== rightNumeric) {
+      return leftNumeric ? -1 : 1;
+    } else if (left[index] !== right[index]) {
+      return left[index] < right[index] ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Orders two versions of the form x.y.z or x.y.z-tag by SemVer precedence. A
+ * release sorts above its own pre-releases; build metadata is ignored.
  * @returns {-1 | 0 | 1}
  */
 export function compareVersions(a, b) {
   const parse = (version) => {
-    const [core, ...tag] = String(version ?? '').split('-');
+    const [core, ...tag] = String(version ?? '').split('+')[0].split('-');
     return { parts: core.split('.').map((part) => Number.parseInt(part, 10) || 0), tag: tag.join('-') };
   };
   const [left, right] = [parse(a), parse(b)];
@@ -102,7 +130,7 @@ export function compareVersions(a, b) {
   if (left.tag === right.tag) return 0;
   if (!left.tag) return 1;
   if (!right.tag) return -1;
-  return left.tag < right.tag ? -1 : 1;
+  return comparePrerelease(left.tag, right.tag);
 }
 
 /**

@@ -32,6 +32,11 @@ describe('entryPathOf', () => {
     expect(entryPathOf({ exports: { '.': { require: './cjs.js' } }, main: 'cjs.js' })).toBeNull();
   });
 
+  it('treats a null target as a blocked path and does not try later conditions', () => {
+    expect(entryPathOf({ exports: { '.': { import: null, default: './fallback.js' } } })).toBeNull();
+    expect(entryPathOf({ exports: { '.': [null, './fallback.js'] } })).toBeNull();
+  });
+
   it('uses main, then index.js, only when there is no exports field', () => {
     expect(entryPathOf({ main: './dist/index.js' })).toBe('dist/index.js');
     expect(entryPathOf({})).toBe('index.js');
@@ -89,5 +94,12 @@ describe('newestVersion', () => {
     expect(newestVersion(['1.0.0-beta.2', '1.0.0', '1.0.0-beta.1'])).toBe('1.0.0');
     expect(compareVersions('1.0.0-beta.1', '1.0.0-beta.2')).toBe(-1);
     expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
+  });
+
+  it('compares pre-release identifiers by SemVer precedence', () => {
+    expect(newestVersion(['1.0.0-beta.2', '1.0.0-beta.11'])).toBe('1.0.0-beta.11');
+    expect(compareVersions('1.0.0-alpha', '1.0.0-alpha.1')).toBe(-1);
+    expect(compareVersions('1.0.0-alpha.1', '1.0.0-alpha.beta')).toBe(-1);
+    expect(compareVersions('1.0.0-rc.1+build.5', '1.0.0-rc.1')).toBe(0);
   });
 });
