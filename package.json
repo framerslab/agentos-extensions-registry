@@ -74,7 +74,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@framers/agentos": ">=0.7.0"
+    "@framers/agentos": "^0.10.32"
   },
   "peerDependenciesMeta": {
     "@framers/agentos": {
@@ -85,7 +85,7 @@
     "@framers/agentos-ext-agent-delegation": "^0.1.0",
     "@framers/agentos-ext-amazon-polly": "^0.2.0",
     "@framers/agentos-ext-auth": "^1.1.0",
-    "@framers/agentos-ext-browser-automation": "^0.1.0",
+    "@framers/agentos-ext-browser-automation": "^0.2.0",
     "@framers/agentos-ext-calendar-google": "^0.1.1",
     "@framers/agentos-ext-channel-blog-publisher": "^0.1.0",
     "@framers/agentos-ext-channel-bluesky": "^0.1.0",
@@ -152,7 +152,7 @@
     "@framers/agentos-ext-github": "^0.1.0",
     "@framers/agentos-ext-google-cloud-stt": "^0.2.0",
     "@framers/agentos-ext-google-cloud-tts": "^0.2.0",
-    "@framers/agentos-ext-grounding-guard": "^0.2.1",
+    "@framers/agentos-ext-grounding-guard": "^0.2.2",
     "@framers/agentos-ext-hacker-news": "^1.0.0",
     "@framers/agentos-ext-image-generation": "^1.0.2",
     "@framers/agentos-ext-image-search": "^1.0.0",
@@ -187,7 +187,7 @@
     "@framers/agentos-skills": "^0.10.1"
   },
   "devDependencies": {
-    "@framers/agentos": "^0.10.31",
+    "@framers/agentos": "^0.10.32",
     "@framers/agentos-ext-trulia-search": "^0.1.0",
     "typescript": "^5.4.5",
     "vitest": "^1.0.0",
