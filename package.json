@@ -192,7 +192,7 @@
     "typescript": "^5.4.5",
     "vitest": "^1.0.0",
     "semantic-release": "25.0.9",
-    "conventional-changelog-conventionalcommits": "^8.0.0"
+    "conventional-changelog-conventionalcommits": "8.0.0"
   },
   "homepage": "https://agentos.sh"
 }
