@@ -187,7 +187,7 @@
     "@framers/agentos-skills": "^0.10.1"
   },
   "devDependencies": {
-    "@framers/agentos": "^0.10.31",
+    "@framers/agentos": "^0.10.32",
     "@framers/agentos-ext-trulia-search": "^0.1.0",
     "typescript": "^5.4.5",
     "vitest": "^1.0.0",
