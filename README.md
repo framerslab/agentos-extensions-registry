@@ -129,6 +129,17 @@ await agent.initialize({ extensionManifest: manifest });
 | `basePriority` | `number` | `0` | Base priority for all extensions |
 | `overrides` | `Record<string, Override>` | `{}` | Per-extension overrides: `{ enabled?, priority?, options? }` |
 
+## Contributing and support
+
+| Guide | What |
+|---|---|
+| [Contributing](https://github.com/framerslab/agentos-extensions-registry/blob/master/CONTRIBUTING.md) | Development setup, commit and pull request rules, review threads, contribution licensing |
+| [Release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md) | How a push to master becomes an npm release |
+| [Agent instructions](https://github.com/framerslab/agentos-extensions-registry/blob/master/AGENTS.md) | Commands and conventions for coding agents |
+| [Code of Conduct](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/CODE_OF_CONDUCT.md) | Community standards |
+| [Security Policy](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/SECURITY.md) | Reporting vulnerabilities privately |
+| [Support](https://github.com/framerslab/agentos-extensions-registry/blob/master/SUPPORT.md) | Where to get help |
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
