@@ -25,3 +25,5 @@ jobs:
         run: pnpm run check:pack
       - name: Optional dependency ranges resolve to published packs with code
         run: pnpm run check:ranges
+      - name: Install next to the latest agentos (npm checks the peer ranges)
+        run: pnpm run check:install

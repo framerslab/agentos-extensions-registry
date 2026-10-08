@@ -51,7 +51,8 @@
     "test": "vitest run --testTimeout 60000",
     "check:pack": "node scripts/check-packed-catalog.mjs",
     "check:ranges": "node scripts/check-published-ranges.mjs",
-    "check:availability": "node scripts/check-availability.mjs"
+    "check:availability": "node scripts/check-availability.mjs",
+    "check:install": "node scripts/check-install-latest-host.mjs"
   },
   "repository": {
     "type": "git",
