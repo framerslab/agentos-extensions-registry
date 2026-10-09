@@ -49,7 +49,8 @@ describe('entryPathOf', () => {
 
   it('treats a null target as a blocked path and does not try later conditions', () => {
     expect(entryPathOf({ exports: { '.': { import: null, default: './fallback.js' } } })).toBeNull();
-    expect(entryPathOf({ exports: { '.': [null, './fallback.js'] } })).toBeNull();
+    // In an array a null is passed over for the next item, as Node does.
+    expect(entryPathOf({ exports: { '.': [null, './fallback.js'] } })).toBe('fallback.js');
   });
 
   it('uses main, then index.js, only when there is no exports field', () => {
