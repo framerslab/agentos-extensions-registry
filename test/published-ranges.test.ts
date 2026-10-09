@@ -22,6 +22,21 @@ describe('entryPathOf', () => {
     expect(entryPathOf({ exports: { '.': [{ import: './esm/index.js' }, './cjs/index.js'] } })).toBe('esm/index.js');
   });
 
+  it('reads an exports array as Node does', () => {
+    expect(entryPathOf({ exports: ['./first.js', './second.js'] })).toBe('first.js');
+    // A target that does not start with "./" is invalid, and the next item is tried.
+    expect(entryPathOf({ exports: ['not-relative.js', './index.js'] })).toBe('index.js');
+    // A null is passed over too, and kept only when no later item resolves.
+    expect(entryPathOf({ exports: [null, './index.js'] })).toBe('index.js');
+    expect(entryPathOf({ exports: [null] })).toBeNull();
+    expect(entryPathOf({ exports: ['not-relative.js'] })).toBeNull();
+    // An empty array blocks the path like a null: the conditions after it are not tried.
+    expect(entryPathOf({ exports: { import: [], default: './fallback.js' } })).toBeNull();
+    // Outside an array nothing recovers from an invalid target: Node cannot import the package.
+    expect(entryPathOf({ exports: 'not-relative.js' })).toBeNull();
+    expect(entryPathOf({ exports: { import: 'not-relative.js', default: './fallback.js' } })).toBeNull();
+  });
+
   it('treats exports without subpath keys as the root target', () => {
     expect(entryPathOf({ exports: './main.js' })).toBe('main.js');
     expect(entryPathOf({ exports: { require: './cjs.js', import: './esm.js' } })).toBe('esm.js');

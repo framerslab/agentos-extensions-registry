@@ -11,26 +11,45 @@
 const ACTIVE_CONDITIONS = new Set(['import', 'node', 'module-sync', 'node-addons', 'default']);
 
 /**
- * Follows an `exports` target down to a file path the way Node does: a string
- * is the path, an array is a list of fallbacks, and a conditions object yields
- * the first key, in the package's own order, that is an active condition and
- * resolves. A `null` target blocks the path: Node stops there and does not try
- * the conditions after it.
+ * What a target Node rejects resolves to: a string that does not start with
+ * "./". Node throws ERR_INVALID_PACKAGE_TARGET for it, and only the next item
+ * of an array recovers from that.
+ */
+const INVALID_TARGET = Symbol('invalid package target');
+
+/**
+ * Follows an `exports` target down to a file path the way Node does
+ * (`resolvePackageTarget` in lib/internal/modules/esm/resolve.js): a string
+ * that starts with "./" is the path, and a conditions object yields the first
+ * key, in the package's own order, that is an active condition and resolves.
+ * A `null` target blocks the path: Node stops there and does not try the
+ * conditions after it. An array is a list of fallbacks tried in order: an
+ * item that is invalid, blocked or resolves to nothing is passed over for
+ * the next, and when no item gives a path the array resolves as its last
+ * invalid or blocked item did. An empty array blocks the path.
  * @param {unknown} target
  * @param {number} depth how many levels of nesting are still followed
- * @returns {string | null | undefined} a path, null when the path is blocked,
- *   undefined when nothing matched
+ * @returns {string | null | undefined | typeof INVALID_TARGET} a path, null
+ *   when the path is blocked, undefined when nothing matched, INVALID_TARGET
+ *   when Node would refuse the target
  */
 function resolveTarget(target, depth) {
-  if (typeof target === 'string') return target;
+  if (typeof target === 'string') return target.startsWith('./') ? target : INVALID_TARGET;
   if (target === null) return null;
   if (depth === 0 || typeof target !== 'object') return undefined;
   if (Array.isArray(target)) {
+    if (target.length === 0) return null;
+    let last;
     for (const item of target) {
       const resolved = resolveTarget(item, depth - 1);
-      if (resolved !== undefined) return resolved;
+      if (resolved === undefined) continue;
+      if (resolved === null || resolved === INVALID_TARGET) {
+        last = resolved;
+        continue;
+      }
+      return resolved;
     }
-    return undefined;
+    return last;
   }
   for (const [condition, value] of Object.entries(target)) {
     if (!ACTIVE_CONDITIONS.has(condition)) continue;
