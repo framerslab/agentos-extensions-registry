@@ -37,6 +37,18 @@ describe('entryPathOf', () => {
     expect(entryPathOf({ exports: { import: 'not-relative.js', default: './fallback.js' } })).toBeNull();
   });
 
+  it('refuses a target with a ".", ".." or node_modules segment, as Node does', () => {
+    expect(entryPathOf({ exports: './../outside.js' })).toBeNull();
+    expect(entryPathOf({ exports: './node_modules/dep/index.js' })).toBeNull();
+    expect(entryPathOf({ exports: './dist/./index.js' })).toBeNull();
+    expect(entryPathOf({ exports: './dist/%2e%2e/index.js' })).toBeNull();
+    // In an array the next item is tried.
+    expect(entryPathOf({ exports: ['./../outside.js', './index.js'] })).toBe('index.js');
+    expect(entryPathOf({ exports: ['./node_modules/dep/index.js', './index.js'] })).toBe('index.js');
+    // A name that only starts with a dot is an ordinary segment.
+    expect(entryPathOf({ exports: './.build/index.js' })).toBe('.build/index.js');
+  });
+
   it('treats exports without subpath keys as the root target', () => {
     expect(entryPathOf({ exports: './main.js' })).toBe('main.js');
     expect(entryPathOf({ exports: { require: './cjs.js', import: './esm.js' } })).toBe('esm.js');
