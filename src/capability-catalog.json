@@ -61,7 +61,7 @@
   {
     "id": "com.framers.channels.email",
     "name": "Email Channel Extension",
-    "description": "Bidirectional email integration — send, read, search, extract verification codes, and reply to email threads via SMTP and IMAP.",
+    "description": "Bidirectional email integration: send through SMTP or Resend's HTTPS API; read, search, extract verification codes and reply through IMAP; keep a suppression record and unsubscribe tokens on a SQL database.",
     "category": "channel",
     "tools": [
       "emailSend",
@@ -873,35 +873,35 @@
   {
     "id": "com.framers.integrations.github",
     "name": "GitHub Extension",
-    "description": "GitHub API tools — 26 tools for repos, issues, PRs, branches, commits, releases, Actions, files, gists, and codebase indexing.",
+    "description": "GitHub API tools: 26 tools for repos, issues, PRs, branches, commits, releases, Actions, files, gists, and codebase indexing. Its ./documents entry adds a GitHub App's installation mode (the app's JWT, installation tokens, the user's web flow, webhook deliveries checked and read as typed events, a daily reconcile, every call under a deadline with rate limit timing) and a connector that reads a repository's documentation as account sources.",
     "category": "tool",
     "tools": [
-      "githubSearch",
-      "githubIssueList",
-      "githubIssueCreate",
-      "githubPrList",
-      "githubPrCreate",
-      "githubFileRead",
-      "githubGistCreate",
-      "repoList",
-      "repoInfo",
-      "repoCreate",
-      "repoIndex",
-      "fileWrite",
-      "branchList",
-      "branchCreate",
-      "commitList",
-      "issueUpdate",
-      "commentList",
-      "prDiff",
-      "prReview",
-      "prMerge",
-      "prCommentList",
-      "prCommentCreate",
-      "releaseList",
-      "releaseCreate",
-      "actionsList",
-      "actionsTrigger"
+      "github_search",
+      "github_issue_list",
+      "github_issue_create",
+      "github_pr_list",
+      "github_pr_create",
+      "github_file_read",
+      "github_gist_create",
+      "github_repo_list",
+      "github_repo_info",
+      "github_repo_create",
+      "github_repo_index",
+      "github_file_write",
+      "github_branch_list",
+      "github_branch_create",
+      "github_commit_list",
+      "github_issue_update",
+      "github_comment_list",
+      "github_pr_diff",
+      "github_pr_review",
+      "github_pr_merge",
+      "github_pr_comment_list",
+      "github_pr_comment_create",
+      "github_release_list",
+      "github_release_create",
+      "github_actions_list",
+      "github_actions_trigger"
     ],
     "requiredSecrets": [
       "github.token"
@@ -966,13 +966,39 @@
   {
     "id": "com.framers.media.voice-synthesis",
     "name": "Voice Synthesis Extension",
-    "description": "Voice synthesis and transcription tools via OpenAI, ElevenLabs, Deepgram, and local Ollama/Whisper-compatible runtimes",
+    "description": "Speech from text through Deepgram, OpenAI, ElevenLabs or an OpenAI-compatible speech server, saved as a file whose URL the tool returns; transcription through OpenAI, Deepgram or a Whisper-compatible server",
     "category": "media",
     "tools": [
       "text_to_speech",
       "speech_to_text"
     ],
     "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.meetings.browser",
+    "name": "Browser Meeting Bot Provider",
+    "description": "A meeting-participant provider that joins Google Meet and Microsoft Teams through a browser in a container, posts a notice, publishes the call's audio into a LiveKit room, and leaves on any participant's stop command.",
+    "category": "meetings",
+    "tools": [
+      "browserMeetingProvider"
+    ],
+    "requiredSecrets": [
+      "meetings.schedulerToken"
+    ]
+  },
+  {
+    "id": "com.framers.meetings.zoom-rtms",
+    "name": "Zoom Realtime Media Streams Meeting Provider",
+    "description": "A meeting-participant provider for Zoom through Realtime Media Streams: no participant joins the meeting; your own Zoom app streams the meeting's audio to a media worker, which publishes it into a LiveKit room.",
+    "category": "meetings",
+    "tools": [
+      "zoomRtmsMeetingProvider"
+    ],
+    "requiredSecrets": [
+      "zoom.clientSecret",
+      "zoom.webhookSecret",
+      "zoom.workerToken"
+    ]
   },
   {
     "id": "com.framers.productivity.document-export",
@@ -1029,6 +1055,16 @@
     ]
   },
   {
+    "id": "com.framers.productivity.gmail-source",
+    "name": "Gmail Source",
+    "description": "Read-only OAuth and bounded personal Gmail source helpers",
+    "category": "productivity",
+    "tools": [
+      "gmailSource"
+    ],
+    "requiredSecrets": []
+  },
+  {
     "id": "com.framers.productivity.google-calendar",
     "name": "Google Calendar Extension",
     "description": "Google Calendar integration with OAuth2 auth and event management — supports event CRUD, free/busy queries, and multi-calendar listing.",
@@ -1047,6 +1083,16 @@
       "google.clientSecret",
       "google.refreshToken"
     ]
+  },
+  {
+    "id": "com.framers.productivity.google-drive",
+    "name": "Google Drive",
+    "description": "Google Drive files a person picked, read under the drive.file scope: Google's grant on AgentOS's redirect OAuth flow, Drive's calls and an account source connector",
+    "category": "productivity",
+    "tools": [
+      "googleDrive"
+    ],
+    "requiredSecrets": []
   },
   {
     "id": "com.framers.productivity.widget-generator",
@@ -1069,6 +1115,26 @@
       "openTimestampsProvider",
       "ethereumProvider",
       "solanaProvider"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.research.account-sources",
+    "name": "Account Sources",
+    "description": "A person's own accounts as sources: connector interfaces, passage attribution, capped reads and a shared limiter",
+    "category": "research",
+    "tools": [
+      "accountSources"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.research.citation-check",
+    "name": "Citation Check",
+    "description": "Checks the quoted claims of a document against the pages they cite, with AgentOS's citation tooling: word for word first, then by embeddings when a model is configured",
+    "category": "research",
+    "tools": [
+      "citation_verify"
     ],
     "requiredSecrets": []
   },
@@ -1120,6 +1186,16 @@
     "category": "research",
     "tools": [
       "news_search"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.research.public-sources",
+    "name": "Public Sources",
+    "description": "Public sources for AgentOS citation checks: English Wikipedia's search and page HTML as attributed passages",
+    "category": "research",
+    "tools": [
+      "wikipediaSourceProvider"
     ],
     "requiredSecrets": []
   },
@@ -1271,7 +1347,7 @@
   {
     "id": "com.framers.tools.image-editing",
     "name": "Image Editing",
-    "description": "Edit images with img2img transformation, inpainting, outpainting, upscaling, and variations using OpenAI, Stability AI, or Replicate.",
+    "description": "Edit images with img2img transformation, inpainting, style transfer, upscaling, and variations using OpenAI, Stability AI, or Replicate.",
     "category": "tool",
     "tools": [
       "editImage",
