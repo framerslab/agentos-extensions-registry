@@ -4,7 +4,8 @@
  * and getAvailableChannels from the extensions registry.
  */
 
-import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi } from 'vitest';
 import {
   createCuratedManifest,
@@ -457,22 +458,23 @@ describe('getAvailableChannels', () => {
     expect(names.has('channel-webchat')).toBe(true);
   });
 
-  it('marks a channel available when it is resolvable', async () => {
+  it('marks a channel available exactly when import resolves it to a file on disk', async () => {
     const channels = await getAvailableChannels();
-    // vitest's module runner does not define import.meta.resolve; the channel
-    // packs have no `exports` map, so require.resolve answers the same question.
-    const nodeRequire = createRequire(import.meta.url);
+    // Asked of plain Node: vitest's module runner does not define import.meta.resolve,
+    // and require.resolve applies the `require` conditions, so it refuses a pack whose
+    // `exports` map has only an `import` entry, as channel-mastodon's has from 0.2.0.
+    const probe = fileURLToPath(new URL('./helpers/import-resolve.mjs', import.meta.url));
+    const result = spawnSync(process.execPath, [probe, JSON.stringify(channels.map((ch) => ch.packageName))], {
+      encoding: 'utf8',
+    });
+    expect(result.status, result.stderr).toBe(0);
+    const resolvable: Record<string, boolean> = JSON.parse(result.stdout);
 
+    // The optional dependencies install with the package, so a comparison in which
+    // nothing resolves would pass for the wrong reason.
+    expect(channels.some((ch) => resolvable[ch.packageName])).toBe(true);
     for (const ch of channels) {
-      let resolvable = false;
-      try {
-        if (typeof import.meta.resolve === 'function') import.meta.resolve(ch.packageName);
-        else nodeRequire.resolve(ch.packageName);
-        resolvable = true;
-      } catch {
-        resolvable = false;
-      }
-      expect(ch.available, `${ch.packageName} available`).toBe(resolvable);
+      expect(ch.available, `${ch.packageName} available`).toBe(resolvable[ch.packageName]);
     }
   });
 
