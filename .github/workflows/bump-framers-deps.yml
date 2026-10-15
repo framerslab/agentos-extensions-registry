@@ -56,6 +56,16 @@ jobs:
             pnpm install --no-frozen-lockfile
           fi
 
+      # This repository's own step: the capability catalog is built from the extension
+      # manifests in agentos-extensions, and a checkout with none beside it keeps the committed
+      # file, so the catalog went stale whenever a pack was added or described anew. The
+      # generator reads ../agentos-extensions/registry/curated; only the manifests are fetched.
+      - name: Regenerate the capability catalog from agentos-extensions' manifests
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/framerslab/agentos-extensions.git ../agentos-extensions
+          git -C ../agentos-extensions sparse-checkout set --no-cone '/registry/curated/**/manifest.json'
+          node scripts/generate-capability-catalog.mjs
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
@@ -72,6 +82,7 @@ jobs:
             - `package.json` explicit-pin updates (caret semver of latest)
             - `pnpm-lock.yaml` refresh
             - Git submodule pointer updates (where the parent repo has submodules)
+            - `src/capability-catalog.json` regenerated from agentos-extensions' manifests
 
             Workspace `workspace:*` pins are not touched. Review the diff
             for any unexpected major-version jumps before merging.
