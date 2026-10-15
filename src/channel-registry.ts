@@ -161,7 +161,7 @@ export const CHANNEL_CATALOG: ChannelRegistryEntry[] = [
     category: 'channel',
     platform: 'email',
     displayName: 'Email',
-    description: 'Email messaging via nodemailer (SMTP) + imapflow (IMAP) — send, read, search, extract codes, reply.',
+    description: "Email messaging via nodemailer (SMTP) or Resend's HTTPS API, and imapflow (IMAP) — send, read, search, extract codes, reply.",
     sdkPackage: 'nodemailer',
     requiredSecrets: ['email.smtpHost', 'email.smtpUser', 'email.smtpPassword'],
     defaultPriority: 30,
