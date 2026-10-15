@@ -35,7 +35,7 @@ Maintainers merge a pull request only when CI is green.
 
 To run one test file: `pnpm exec vitest run <path>`.
 
-`pnpm build` first runs [`scripts/generate-capability-catalog.mjs`](https://github.com/framerslab/agentos-extensions-registry/blob/master/scripts/generate-capability-catalog.mjs). It rewrites `src/capability-catalog.json` from the extension manifests under `../agentos-extensions/registry/curated` (a checkout of agentos-extensions beside this one) or under the directory named by `CAPABILITY_CATALOG_EXTENSIONS_ROOT`. When it finds no manifests it leaves the committed file as it is.
+`pnpm build` first runs [`scripts/generate-capability-catalog.mjs`](https://github.com/framerslab/agentos-extensions-registry/blob/master/scripts/generate-capability-catalog.mjs). It rewrites `src/capability-catalog.json` from the extension manifests under `../agentos-extensions/registry/curated` (a checkout of agentos-extensions beside this one) or under the directory named by `CAPABILITY_CATALOG_EXTENSIONS_ROOT`. When it finds no manifests it leaves the committed file as it is. The weekly bump workflow ([`bump-framers-deps.yml`](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/workflows/bump-framers-deps.yml)) runs it against the manifests on agentos-extensions' `master`, so its pull request carries the catalog they describe; between bumps, regenerate it the same way when a pack is added or its manifest changes, and commit the result.
 
 ## Commit messages
 
