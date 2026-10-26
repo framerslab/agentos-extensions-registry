@@ -41,18 +41,18 @@ The bump pushes its branch and opens its pull request with `FRAMERS_BUMP_TOKEN`,
 
 ## Commit messages
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). The type decides the release. [`release.config.cjs`](https://github.com/framerslab/agentos-extensions-registry/blob/master/release.config.cjs) sets the `conventionalcommits` preset and one rule of its own, `chore(deps)` releases a patch; the commit analyzer's default rules decide every other commit:
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). The type decides the release. [`release.config.cjs`](https://github.com/framerslab/agentos-extensions-registry/blob/master/release.config.cjs) sets the `conventionalcommits` preset and two rules of its own, `chore(deps)` and `revert` each release a patch; the commit analyzer's default rules decide every other commit:
 
 | Commit | Release |
 |---|---|
 | `feat` | minor |
-| `fix`, `perf`, `chore(deps)`, a revert commit as `git revert` writes it | patch |
+| `fix`, `perf`, `revert`, `chore(deps)`, a revert commit as `git revert` writes it | patch |
 | any type with `!` before the colon, or a `BREAKING CHANGE:` footer | major |
 | `docs`, `chore` (`chore(deps-dev)` included), `test`, `ci`, `build`, `style`, `refactor` | none |
 
 The package is below 1.0.0, and a major release takes it to 1.0.0. Mark a change as breaking only when it is one.
 
-A commit that changes `dependencies`, `optionalDependencies` or `peerDependencies` is titled `chore(deps)` or `fix(deps)` and publishes a patch; one that changes `devDependencies` alone is titled `chore(deps-dev)` and publishes nothing.
+A commit that changes `dependencies`, `optionalDependencies` or `peerDependencies` is titled `chore(deps)` or `fix(deps)` and publishes a patch; one that changes `devDependencies` alone is titled `chore(deps-dev)` and publishes nothing. A pull request that undoes an earlier change is titled `revert: <what it undoes>` and publishes a patch.
 
 Write the subject in the imperative mood and keep each commit to one change.
 
