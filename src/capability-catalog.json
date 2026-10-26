@@ -61,7 +61,7 @@
   {
     "id": "com.framers.channels.email",
     "name": "Email Channel Extension",
-    "description": "Bidirectional email integration: send through SMTP or Resend's HTTPS API; read, search, extract verification codes and reply through IMAP; keep a suppression record and unsubscribe tokens on a SQL database.",
+    "description": "Bidirectional email integration: send through SMTP or Resend's HTTPS API; read, search, extract verification codes, reply, move, label, flag and delete through IMAP; keep a suppression record and unsubscribe tokens on a SQL database.",
     "category": "channel",
     "tools": [
       "emailSend",
@@ -1313,6 +1313,16 @@
     "requiredSecrets": []
   },
   {
+    "id": "com.framers.system.operations",
+    "name": "Operations",
+    "description": "Operations records in a product's own database through the SQL storage adapter: a log table with search, an events table with daily totals over the product's figures, and the jobs that keep them, under a table prefix of its own. Support requests, error capture and health checks are typed stubs until the next minor release.",
+    "category": "system",
+    "tools": [
+      "operations"
+    ],
+    "requiredSecrets": []
+  },
+  {
     "id": "com.framers.tools.agent-delegation",
     "name": "Agent Delegation",
     "description": "Inter-agent communication tools for multi-agent collaboration. Ping, discover, and delegate tasks to remote Wunderland agents over HTTP.",
@@ -1341,6 +1351,16 @@
     "category": "tool",
     "tools": [
       "verify_citations"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.tools.document-parser",
+    "name": "Document Parser",
+    "description": "A document reader over a Unix socket: PDF, Word and text files read with AgentOS's isolated loader inside a container of their own",
+    "category": "tool",
+    "tools": [
+      "documentParser"
     ],
     "requiredSecrets": []
   },
