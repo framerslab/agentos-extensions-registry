@@ -908,6 +908,16 @@
     ]
   },
   {
+    "id": "com.framers.integrations.notion",
+    "name": "Notion",
+    "description": "A public Notion connection's OAuth for a host that keeps its own grant, and pages written as typed plain-text blocks inside Notion's request limits",
+    "category": "integrations",
+    "tools": [
+      "notion"
+    ],
+    "requiredSecrets": []
+  },
+  {
     "id": "com.framers.integrations.telegram",
     "name": "Telegram Bot Extension",
     "description": "Professional Telegram Bot API integration for AgentOS - send messages, manage groups, handle callbacks",
@@ -1315,7 +1325,7 @@
   {
     "id": "com.framers.system.operations",
     "name": "Operations",
-    "description": "Operations records in a product's own database through the SQL storage adapter: a log table with search, an events table with daily totals over the product's figures, and the jobs that keep them, under a table prefix of its own. Support requests, error capture and health checks are typed stubs until the next minor release.",
+    "description": "Operations records in a product's own database through the SQL storage adapter: support requests with a per-request anonymous id, a live stream, mail and bell outboxes, pictures, deletions and an export; a log table with search; an events table with daily totals over the product's figures; and the jobs that keep them, under a table prefix of its own. Error capture and health checks are typed stubs until the next minor release.",
     "category": "system",
     "tools": [
       "operations"
