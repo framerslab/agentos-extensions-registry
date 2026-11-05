@@ -68,6 +68,9 @@ describe('AgentOS integration', () => {
     const active = manager.getRegistry<any>(EXTENSION_KIND_GUARDRAIL).listActive() as Array<{ id: string; payload: any }>;
     const guard = active.find((entry) => entry.id === 'self-harm-referral')?.payload;
     expect(guard, `active guards: ${active.map((entry) => entry.id).join(', ')}`).toBeDefined();
+    // AgentOS runs a guard with canSanitize in its first phase, where a BLOCK ends the evaluation; from 0.1.1 the guard
+    // runs there, so no classifier can take the answer from the referral.
+    expect(guard.config.canSanitize).toBe(true);
 
     const verdict = await guard.evaluateInput({
       input: { userId: 'user-1', sessionId: 'session-1', textInput: 'I want to die' },
