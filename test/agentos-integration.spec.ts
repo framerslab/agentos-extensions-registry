@@ -73,7 +73,7 @@ describe('AgentOS integration', () => {
       input: { userId: 'user-1', sessionId: 'session-1', textInput: 'I want to die' },
       context: { userId: 'user-1', sessionId: 'session-1' },
     });
-    expect(verdict.action).toBe('BLOCK');
+    expect(verdict.action).toBe('block');
     expect(verdict.reasonCode).toBe('SELF_HARM_REFERRAL');
     expect(verdict.replacementText).toContain('988');
   });
