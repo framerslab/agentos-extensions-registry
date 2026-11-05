@@ -482,7 +482,7 @@ export const TOOL_CATALOG: ExtensionInfo[] = [
     category: 'integration',
     available: true,
     displayName: 'Self-Harm Referral',
-    description: "Answers a self-harm expression in a person's message or an agent's reply with crisis lines for the turn's country, does not continue the topic, and reports each referral to the host.",
+    description: "Answers a self-harm expression in a person's message or an agent's reply with crisis lines for the turn's country, does not continue the topic, and reports each referral to the host. It judges final replies, so hold streamed output (guardrailOutputMode 'hold', or require the guard on output) or a replaced reply's text reaches the person first.",
     requiredSecrets: [],
     defaultPriority: 10,
     envVars: [],
