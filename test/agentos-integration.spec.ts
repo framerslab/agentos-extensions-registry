@@ -11,7 +11,8 @@ import { describe, it, expect } from 'vitest';
 import { createCuratedManifest, getAvailableExtensions } from '../src/index';
 // The published package is the contract a standalone checkout and every
 // consumer resolve, so the integration test uses it too.
-import { EXTENSION_KIND_TOOL, ExtensionManager } from '@framers/agentos/extensions';
+import { EXTENSION_KIND_GUARDRAIL, EXTENSION_KIND_TOOL, ExtensionManager } from '@framers/agentos/extensions';
+import { TOOL_CATALOG } from '../src/tool-registry';
 
 describe('AgentOS integration', () => {
   it('loads secret-gated tools when secrets are provided in the manifest', async () => {
@@ -44,6 +45,44 @@ describe('AgentOS integration', () => {
       } else {
         process.env.GIPHY_API_KEY = prev;
       }
+    }
+  });
+
+  it('loads the self-harm referral guard by name, and the pack it builds answers a person with the referral', async () => {
+    const warnings: string[] = [];
+    const manifest = await createCuratedManifest({
+      channels: 'none',
+      tools: ['self-harm-referral'],
+      voice: 'none',
+      productivity: 'none',
+      cloud: 'none',
+      domains: 'none',
+      logger: { warn: (line: string) => void warnings.push(line) },
+    });
+
+    expect(manifest.packs.map((pack) => pack.identifier)).toEqual(['registry:self-harm-referral']);
+    expect(warnings).toEqual([]);
+
+    const manager = new ExtensionManager({ manifest });
+    await manager.loadManifest();
+    const active = manager.getRegistry<any>(EXTENSION_KIND_GUARDRAIL).listActive() as Array<{ id: string; payload: any }>;
+    const guard = active.find((entry) => entry.id === 'self-harm-referral')?.payload;
+    expect(guard, `active guards: ${active.map((entry) => entry.id).join(', ')}`).toBeDefined();
+
+    const verdict = await guard.evaluateInput({
+      input: { userId: 'user-1', sessionId: 'session-1', textInput: 'I want to die' },
+      context: { userId: 'user-1', sessionId: 'session-1' },
+    });
+    expect(verdict.action).toBe('BLOCK');
+    expect(verdict.reasonCode).toBe('SELF_HARM_REFERRAL');
+    expect(verdict.replacementText).toContain('988');
+  });
+
+  it('registers the self-harm referral guard before the other guards the catalog names, so a person gets the lines first', () => {
+    const position = (name: string) => TOOL_CATALOG.findIndex((entry) => entry.name === name);
+    expect(position('self-harm-referral')).toBeGreaterThanOrEqual(0);
+    for (const other of ['pii-redaction', 'ml-classifiers', 'topicality', 'code-safety', 'grounding-guard', 'content-policy-rewriter']) {
+      expect(position('self-harm-referral'), other).toBeLessThan(position(other));
     }
   });
 
