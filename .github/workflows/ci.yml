@@ -47,14 +47,15 @@ jobs:
         if: env.QUICK != 'true'
         run: pnpm test
       # vitest --changed runs the test files that the changed files reach through their imports, and every
-      # test when package.json changed; with none, it passes. A push whose base is missing runs every test.
+      # test when package.json changed; with none, it passes (vitest 1.6.1 turns passWithNoTests on under
+      # --changed; the flag says so for any 1.x the range installs). A push whose base is missing runs every test.
       - name: Test what the push changed
         if: env.QUICK == 'true'
         env:
           BEFORE: ${{ github.event.before }}
         run: |
           if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            pnpm exec vitest run --testTimeout 60000 --changed "$BEFORE"
+            pnpm exec vitest run --testTimeout 60000 --passWithNoTests --changed "$BEFORE"
           else
             echo "No base commit for this push; running every test."
             pnpm test
