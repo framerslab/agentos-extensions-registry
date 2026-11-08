@@ -908,6 +908,16 @@
     ]
   },
   {
+    "id": "com.framers.integrations.notion",
+    "name": "Notion",
+    "description": "A public Notion connection's OAuth for a host that keeps its own grant, and pages written as typed plain-text blocks inside Notion's request limits",
+    "category": "integrations",
+    "tools": [
+      "notion"
+    ],
+    "requiredSecrets": []
+  },
+  {
     "id": "com.framers.integrations.telegram",
     "name": "Telegram Bot Extension",
     "description": "Professional Telegram Bot API integration for AgentOS - send messages, manage groups, handle callbacks",
@@ -973,6 +983,39 @@
       "speech_to_text"
     ],
     "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.media.wildweave-film",
+    "name": "WildWeave Film Studio Extension",
+    "description": "WildWeave's film studio as 22 tools and an MCP server: read and edit a film's timeline and sidecar in a wilds.ai account through the studio's API with a per-account key, export it into the film repository, run the local film engine (cut, validate, strip, coverage, render, preview push) and keep the proposals yes-list.",
+    "category": "tool",
+    "tools": [
+      "wildweave_film_list",
+      "wildweave_film_documents",
+      "wildweave_film_document_read",
+      "wildweave_film_timeline",
+      "wildweave_film_scene",
+      "wildweave_film_validate",
+      "wildweave_film_edit",
+      "wildweave_film_edits",
+      "wildweave_film_revert",
+      "wildweave_film_import",
+      "wildweave_film_export",
+      "wildweave_film_inspect",
+      "wildweave_film_cut",
+      "wildweave_film_strip",
+      "wildweave_film_coverage",
+      "wildweave_film_render",
+      "wildweave_film_records",
+      "wildweave_film_preview",
+      "wildweave_film_preview_push",
+      "wildweave_film_proposals",
+      "wildweave_film_proposal_submit",
+      "wildweave_film_proposal_decide"
+    ],
+    "requiredSecrets": [
+      "wildweave.studio.key"
+    ]
   },
   {
     "id": "com.framers.meetings.browser",
@@ -1091,6 +1134,16 @@
     "category": "productivity",
     "tools": [
       "googleDrive"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.productivity.slack-source",
+    "name": "Slack Source",
+    "description": "The Slack read as an account source: bot OAuth v2 with token rotation, signed events, per-method ceilings and channel-day documents",
+    "category": "productivity",
+    "tools": [
+      "slackSource"
     ],
     "requiredSecrets": []
   },
@@ -1263,6 +1316,16 @@
     "requiredSecrets": []
   },
   {
+    "id": "com.framers.safety.self-harm-referral",
+    "name": "Self-Harm Referral Guardrail",
+    "description": "Answers a self-harm expression in a person's message or an agent's reply with crisis lines for the turn's country or locale, does not continue the topic, and reports each referral to the host",
+    "category": "safety",
+    "tools": [
+      "self-harm-referral"
+    ],
+    "requiredSecrets": []
+  },
+  {
     "id": "com.framers.system.browser-automation",
     "name": "Browser Automation Extension",
     "description": "Full browser automation for autonomous agents — navigate URLs, interact with DOM elements, capture screenshots, solve captchas, and rotate proxies. Powered by Playwright with persistent session support.",
@@ -1315,10 +1378,20 @@
   {
     "id": "com.framers.system.operations",
     "name": "Operations",
-    "description": "Operations records in a product's own database through the SQL storage adapter: a log table with search, an events table with daily totals over the product's figures, and the jobs that keep them, under a table prefix of its own. Support requests, error capture and health checks are typed stubs until the next minor release.",
+    "description": "Operations records in a product's own database through the SQL storage adapter: support requests with a per-request anonymous id, a live stream, mail and bell outboxes, pictures, deletions and an export; a log table with search; an events table with daily totals over the product's figures; and the jobs that keep them, under a table prefix of its own. Error capture and health checks are typed stubs until the next minor release.",
     "category": "system",
     "tools": [
       "operations"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.system.triggers",
+    "name": "Triggers",
+    "description": "A scheduler of record over the SQL storage adapter: job rows, a lease with a claim token, runs, missed runs and their rule, pause, resume, a hand run, bounded retries and a failed state, a stall watcher, reports-only jobs and an audit hook, with migrations on PostgreSQL and SQLite.",
+    "category": "system",
+    "tools": [
+      "triggers"
     ],
     "requiredSecrets": []
   },
