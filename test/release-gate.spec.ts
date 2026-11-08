@@ -166,7 +166,7 @@ describe('release gate: a git history', () => {
     for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  function repo() {
+  function repo(first = 'feat: first') {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'release-gate-'));
     dirs.push(dir);
     const env = {
@@ -189,15 +189,25 @@ describe('release gate: a git history', () => {
       git('commit', '-q', '--allow-empty', '-m', message);
       return git('rev-parse', 'HEAD');
     };
-    commit('feat: first', { 'package.json': '{}', 'src/index.ts': 'export {};\n' });
+    commit(first, { 'package.json': '{}', 'src/index.ts': 'export {};\n' });
     return { dir, git, commit };
   }
 
   const run = (dir, force = false) => decide({ cwd: dir, force, pkg, config: releaseConfig });
 
-  it('releases when no release tag is reachable', () => {
+  it('reads every commit when no release tag is reachable, the root commit included', () => {
     const { dir } = repo();
-    expect(run(dir)).toMatchObject({ releasable: true, lastTag: '' });
+    const result = run(dir);
+    expect(result).toMatchObject({ releasable: true, lastTag: '', commits: 1 });
+    expect(result.releasing[0]).toMatchObject({ why: 'feat', files: ['package.json', 'src/index.ts'] });
+  });
+
+  it('holds with no release tag when no commit releases', () => {
+    const { dir, commit } = repo('chore: scaffold');
+    commit('docs: explain the catalog', { 'README.md': 'docs\n' });
+    const result = run(dir);
+    expect(result).toMatchObject({ releasable: false, lastTag: '', commits: 2 });
+    expect(result.reason).toContain('no release tag reachable');
   });
 
   it('holds when nothing came after the tag, and when what came after does not release or ships nothing', () => {

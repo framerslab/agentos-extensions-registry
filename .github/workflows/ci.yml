@@ -48,17 +48,23 @@ jobs:
         run: pnpm test
       # vitest --changed runs the test files that the changed files reach through their imports, and every
       # test when package.json changed; with none, it passes (vitest 1.6.1 turns passWithNoTests on under
-      # --changed; the flag says so for any 1.x the range installs). A push whose base is missing runs every test.
+      # --changed; the flag says so for any 1.x the range installs). Some tests reach a file without importing
+      # it (the catalog generator runs as a child process, pr-title.yml and release.config.cjs are read from
+      # disk), so a push that changes anything outside src/, test/ and Markdown runs every test. So does a
+      # push whose base is missing.
       - name: Test what the push changed
         if: env.QUICK == 'true'
         env:
           BEFORE: ${{ github.event.before }}
         run: |
-          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            pnpm exec vitest run --testTimeout 60000 --passWithNoTests --changed "$BEFORE"
-          else
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             echo "No base commit for this push; running every test."
             pnpm test
+          elif git diff -z --name-only "$BEFORE" HEAD | grep -qzv -E '^(src|test)/|\.md$'; then
+            echo "The push changes a file outside src/, test/ and Markdown; running every test."
+            pnpm test
+          else
+            pnpm exec vitest run --testTimeout 60000 --passWithNoTests --changed "$BEFORE"
           fi
       - name: Availability matches what can load (plain Node)
         if: env.QUICK != 'true'

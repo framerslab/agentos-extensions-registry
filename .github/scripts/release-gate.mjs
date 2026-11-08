@@ -117,7 +117,7 @@ export function lastReleaseTag(git, tagFormat) {
 }
 
 /**
- * Reads the commits after the last release tag and decides.
+ * Reads the commits after the last release tag, or every commit when there is none, and decides.
  * @returns {{ releasable: boolean, reason: string, lastTag: string, commits: number, releasing: Array<{sha: string, header: string, why: string, files: string[]}> }}
  */
 export function decide({ cwd, force = false, pkg, config }) {
@@ -126,11 +126,10 @@ export function decide({ cwd, force = false, pkg, config }) {
   if (force) {
     return { releasable: true, reason: 'the force input skips the check', lastTag, commits: 0, releasing: [] };
   }
-  if (!lastTag) {
-    return { releasable: true, reason: 'no release tag is reachable from master', lastTag, commits: 0, releasing: [] };
-  }
   const rules = releaseRulesOf(config);
-  const shas = git('rev-list', `${lastTag}..HEAD`).split('\n').filter(Boolean);
+  // With no release tag, semantic-release reads every commit on the branch, and so does the gate.
+  const shas = git('rev-list', lastTag ? `${lastTag}..HEAD` : 'HEAD').split('\n').filter(Boolean);
+  const since = lastTag ? `since ${lastTag}` : 'on master, with no release tag reachable,';
   const releasing = [];
   for (const sha of shas) {
     const message = git('log', '-1', '--format=%B', sha);
@@ -146,8 +145,8 @@ export function decide({ cwd, force = false, pkg, config }) {
     if (files.length) releasing.push({ sha, header: message.split('\n')[0], why, files });
   }
   const reason = releasing.length
-    ? `${releasing.length} of ${shas.length} commits since ${lastTag} release and change what the package ships`
-    : `none of the ${shas.length} commits since ${lastTag} both releases by release.config.cjs and changes what the package ships`;
+    ? `${releasing.length} of ${shas.length} commits ${since} release and change what the package ships`
+    : `none of the ${shas.length} commits ${since} both releases by release.config.cjs and changes what the package ships`;
   return { releasable: releasing.length > 0, reason, lastTag, commits: shas.length, releasing };
 }
 
