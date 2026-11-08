@@ -60,8 +60,13 @@ jobs:
           if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             echo "No base commit for this push; running every test."
             pnpm test
-          elif git diff -z --name-only "$BEFORE" HEAD | grep -qzv -E '^(src|test)/|\.md$'; then
-            echo "The push changes a file outside src/, test/ and Markdown; running every test."
+            exit 0
+          fi
+          # Read whole, not through grep -q, which can stop reading early and fail git under pipefail.
+          outside="$(git diff -z --name-only "$BEFORE" HEAD | tr '\0' '\n' | grep -v -E '^(src|test)/|\.md$' || true)"
+          if [ -n "$outside" ]; then
+            echo "The push changes files outside src/, test/ and Markdown; running every test:"
+            printf '%s\n' "$outside"
             pnpm test
           else
             pnpm exec vitest run --testTimeout 60000 --passWithNoTests --changed "$BEFORE"
