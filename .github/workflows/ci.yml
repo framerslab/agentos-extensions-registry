@@ -1,15 +1,40 @@
 name: CI
 
+# A pull request runs the whole suite: install, build (the catalog generator, then tsc, which typechecks),
+# every test and the four checks below. A push to master runs the quick checks alone: the build and the tests
+# that the push's changes reach (vitest --changed), and never publishes. The daily release (release.yml)
+# calls this file through workflow_call with release: true on master's commit before it publishes, and only
+# on a day with a change to release; that run is the whole suite.
 on:
   push:
     branches: [master]
   pull_request:
+  workflow_call:
+    inputs:
+      release:
+        description: Run the whole suite, as the release does before it publishes
+        type: boolean
+        default: false
+
+# The workflow's token can read the repository and nothing else.
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      # A push to master, outside a release run: the quick checks.
+      QUICK: ${{ github.event_name == 'push' && !inputs.release }}
+
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The quick checks diff the push against the commit before it, so they need the history. The
+          # depth is a string: a bare 0 is false in an expression and would fall through to 1.
+          fetch-depth: ${{ github.event_name == 'push' && !inputs.release && '0' || '1' }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -18,12 +43,43 @@ jobs:
           node-version: '22'
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm build
-      - run: pnpm test
+      - name: Test
+        if: env.QUICK != 'true'
+        run: pnpm test
+      # vitest --changed runs the test files that the changed files reach through their imports, and every
+      # test when package.json changed; with none, it passes (vitest 1.6.1 turns passWithNoTests on under
+      # --changed; the flag says so for any 1.x the range installs). Some tests reach a file without importing
+      # it (the catalog generator runs as a child process, pr-title.yml and release.config.cjs are read from
+      # disk), so a push that changes anything outside src/, test/ and Markdown runs every test. So does a
+      # push whose base is missing.
+      - name: Test what the push changed
+        if: env.QUICK == 'true'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "No base commit for this push; running every test."
+            pnpm test
+            exit 0
+          fi
+          # Read whole, not through grep -q, which can stop reading early and fail git under pipefail.
+          outside="$(git diff -z --name-only "$BEFORE" HEAD | tr '\0' '\n' | grep -v -E '^(src|test)/|\.md$' || true)"
+          if [ -n "$outside" ]; then
+            echo "The push changes files outside src/, test/ and Markdown; running every test:"
+            printf '%s\n' "$outside"
+            pnpm test
+          else
+            pnpm exec vitest run --testTimeout 60000 --passWithNoTests --changed "$BEFORE"
+          fi
       - name: Availability matches what can load (plain Node)
+        if: env.QUICK != 'true'
         run: pnpm run check:availability
       - name: Packed tarball ships the capability catalog
+        if: env.QUICK != 'true'
         run: pnpm run check:pack
       - name: Optional dependency ranges resolve to published packs with code
+        if: env.QUICK != 'true'
         run: pnpm run check:ranges
       - name: Install next to the latest agentos (npm checks the peer ranges)
+        if: env.QUICK != 'true'
         run: pnpm run check:install

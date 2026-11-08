@@ -23,13 +23,16 @@ pnpm test
 
 The repository commits no lockfile, so `pnpm install` resolves the newest version each range allows.
 
-CI ([`ci.yml`](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/workflows/ci.yml)) runs one job, "build", on every pull request and every push to `master`. In order: `pnpm install --no-frozen-lockfile`, `pnpm build`, `pnpm test`, then three checks:
+CI ([`ci.yml`](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/workflows/ci.yml)) runs one job, "build". On a pull request it runs the whole suite, in order: `pnpm install --no-frozen-lockfile`, `pnpm build`, `pnpm test`, then four checks:
 
 | Command | What it checks |
 |---|---|
 | `pnpm run check:availability` | Under plain Node, a catalog entry is reported as available exactly when its package can load. |
 | `pnpm run check:pack` | The tarball, packed as a release packs it, contains a populated capability catalog. |
 | `pnpm run check:ranges` | Every optional dependency range resolves to a version on npm whose tarball contains the package's entry point. |
+| `pnpm run check:install` | The package installs next to the latest `@framers/agentos`, and npm accepts the peer ranges. |
+
+On a push to `master` it runs the quick checks: the install, the build and the tests that the push's changes reach (`vitest run --changed`). The daily release runs the whole suite again before it publishes.
 
 Maintainers merge a pull request only when CI is green.
 
@@ -83,7 +86,7 @@ This repository is Apache-2.0. By submitting a contribution you agree it is prov
 
 ## Releases
 
-Every push to `master`, including a merged pull request, starts the release workflow. The [release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md) explains what publishes and when.
+A release runs once a day, at 10:17 UTC, when `master` holds a change to release; a maintainer can dispatch one sooner with `gh workflow run release.yml --ref master`. The [release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md) explains what publishes and when.
 
 ## Code of Conduct
 

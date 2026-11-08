@@ -134,7 +134,7 @@ await agent.initialize({ extensionManifest: manifest });
 | Guide | What |
 |---|---|
 | [Contributing](https://github.com/framerslab/agentos-extensions-registry/blob/master/CONTRIBUTING.md) | Development setup, commit and pull request rules, review threads, contribution licensing |
-| [Release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md) | How a push to master becomes an npm release |
+| [Release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md) | How the daily release at 10:17 UTC publishes master to npm |
 | [Agent instructions](https://github.com/framerslab/agentos-extensions-registry/blob/master/AGENTS.md) | Commands and conventions for coding agents |
 | [Code of Conduct](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/CODE_OF_CONDUCT.md) | Community standards |
 | [Security Policy](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/SECURITY.md) | Reporting vulnerabilities privately |
