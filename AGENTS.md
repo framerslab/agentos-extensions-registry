@@ -15,7 +15,7 @@ Instructions for coding agents working in this repository. People contributing b
 - `src/capability-catalog.ts`, `src/capability-catalog.json`: the generated capability catalog
 - `src/types.ts`: shared types
 - `test/`: vitest suites
-- `scripts/`: the capability catalog generator and the three checks CI runs
+- `scripts/`: the capability catalog generator and the checks CI runs
 - `examples/`: a runnable example
 - `.github/workflows/`: CI, the release and the weekly dependency bump
 
@@ -27,7 +27,7 @@ CI uses Node 22 and pnpm 10. TypeScript compiled with `tsc` (Bundler module reso
 
 CI runs the commands below, and its result decides. Run any of them locally to check a change before you push.
 
-CI runs (job "build" in [`.github/workflows/ci.yml`](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/workflows/ci.yml)), in order:
+CI runs on a pull request (job "build" in [`.github/workflows/ci.yml`](https://github.com/framerslab/agentos-extensions-registry/blob/master/.github/workflows/ci.yml)), in order:
 
 1. `pnpm install --no-frozen-lockfile`
 2. `pnpm build` (runs `scripts/generate-capability-catalog.mjs`, then `tsc`)
@@ -35,8 +35,9 @@ CI runs (job "build" in [`.github/workflows/ci.yml`](https://github.com/framersl
 4. `pnpm run check:availability` (under plain Node, a catalog entry is available exactly when its package can load; run it after the build)
 5. `pnpm run check:pack` (the packed tarball contains a populated capability catalog)
 6. `pnpm run check:ranges` (every optional dependency range resolves to a published version whose tarball contains its entry point)
+7. `pnpm run check:install` (the package installs next to the latest `@framers/agentos`, and npm accepts the peer ranges)
 
-The release workflow runs the same six steps before it releases.
+A push to `master` runs the quick checks: steps 1 and 2 and `vitest run --changed` against the commit before the push. The daily release runs all seven steps before it releases.
 
 To run one test file: `pnpm exec vitest run <path>`.
 
@@ -61,7 +62,7 @@ Available scripts that CI does not run on their own: `pnpm run clean` (removes `
 
 ## Releases
 
-semantic-release evaluates every push to `master`, except a push whose head commit message contains `[skip ci]`. `feat` releases a minor; `fix`, `perf` and a revert commit release a patch; a breaking change releases a major, which takes this package to 1.0.0; `docs`, `chore`, `test`, `ci`, `build`, `style` and `refactor` release nothing. The release pushes a `v` tag and publishes to npm; it commits nothing, so never edit the `version` field to release, never create a `v` tag by hand and never run `npm publish`. Details: the [release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md).
+A release runs once a day, at 10:17 UTC, when a commit since the last `v` tag both releases and changes what the package ships; `gh workflow run release.yml --ref master` releases sooner. semantic-release decides the version. `feat` releases a minor; `fix`, `perf` and a revert commit release a patch; a breaking change releases a major, which takes this package to 1.0.0; `docs`, `chore`, `test`, `ci`, `build`, `style` and `refactor` release nothing. The release pushes a `v` tag and publishes to npm; it commits nothing, so never edit the `version` field to release, never create a `v` tag by hand and never run `npm publish`. Details: the [release guide](https://github.com/framerslab/agentos-extensions-registry/blob/master/RELEASING.md).
 
 ## Automated review threads
 
