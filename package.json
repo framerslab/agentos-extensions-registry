@@ -176,7 +176,7 @@
     "@framers/agentos-ext-telegram": "^1.2.3",
     "@framers/agentos-ext-tool-multi-channel-post": "^0.1.4",
     "@framers/agentos-ext-tool-site-deploy": "^0.1.4",
-    "@framers/agentos-ext-topicality": "^0.2.3",
+    "@framers/agentos-ext-topicality": "^0.2.4",
     "@framers/agentos-ext-voice-plivo": "^0.2.2",
     "@framers/agentos-ext-voice-synthesis": "^3.1.2",
     "@framers/agentos-ext-voice-telnyx": "^0.2.2",
@@ -190,7 +190,7 @@
     "@framers/agentos-skills": "^0.10.4"
   },
   "devDependencies": {
-    "@framers/agentos": "^0.15.119",
+    "@framers/agentos": "^0.15.120",
     "@framers/agentos-ext-trulia-search": "^0.1.4",
     "typescript": "^5.4.5",
     "vitest": "^1.0.0",
