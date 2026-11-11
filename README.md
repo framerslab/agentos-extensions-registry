@@ -42,11 +42,11 @@ Every catalog entry in `CHANNEL_CATALOG`, `TOOL_CATALOG`, and `PROVIDER_CATALOG`
 
 ### Layer 3: per-extension `requiredSecrets` in catalog metadata
 
-`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. Optional secrets unlock optional features (the LLM judge in pii-redaction, the LLM fallback in topicality and ml-classifiers) without making them required.
+`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. Optional secrets unlock optional features (the LLM judge in pii-redaction) without making them required. The LLM tiers of topicality and ml-classifiers take no secret: they run when the host passes an `llmInvoker` callback in the pack's options.
 
 ### Layer 4: heavy resources defer to `SharedServiceRegistry`
 
-The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Packs register factories at activation; the factory only runs on the first call that asks for the key. Subsequent calls (other tools in the same pack, the streaming guardrail, supervisor agents) share the cached instance. The 110MB BERT NER model in pii-redaction, the ONNX classifier orchestrator in ml-classifiers, the NLI entailment pipeline in grounding-guard, and the embedding model in topicality all lazy-load this way.
+The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Packs register factories at activation; the factory only runs on the first call that asks for the key. Subsequent calls (other tools in the same pack, the streaming guardrail, supervisor agents) share the cached instance. The 110MB BERT NER model in pii-redaction, the NLI entailment pipeline in grounding-guard, and the embedding model in topicality all lazy-load this way. ml-classifiers loads its one ONNX model (toxic-bert) inside its guardrail on the first classification, without the shared registry.
 
 ### What this looks like end-to-end
 
