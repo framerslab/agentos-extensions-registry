@@ -506,7 +506,7 @@ export const TOOL_CATALOG: ExtensionInfo[] = [
     category: 'integration',
     available: true,
     displayName: 'ML Content Classifiers',
-    description: 'Content classification guardrail: one local English toxicity model (toxic-bert) through ONNX, with an LLM judge or keyword patterns as fallbacks, on user input and final replies.',
+    description: "Content classification guardrail scoring toxic, injection, nsfw and threat on user input and final replies: one local English toxicity model (toxic-bert) through ONNX, with an LLM judge or keyword patterns as fallbacks, and injection is scored only when a fallback answers. It reads no streamed chunks, so hold streamed output (guardrailOutputMode 'hold', or require the guard on output) or streamed text reaches the person before the check.",
     requiredSecrets: [],
     defaultPriority: 5,
     envVars: [],
