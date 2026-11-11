@@ -46,7 +46,7 @@ Every catalog entry in `CHANNEL_CATALOG`, `TOOL_CATALOG`, and `PROVIDER_CATALOG`
 
 ### Layer 4: heavy resources defer to `SharedServiceRegistry`
 
-The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Packs register factories at activation; the factory only runs on the first call that asks for the key. Subsequent calls (other tools in the same pack, the streaming guardrail, supervisor agents) share the cached instance. The 110MB BERT NER model in pii-redaction, the NLI entailment pipeline in grounding-guard, and the embedding model in topicality all lazy-load this way. ml-classifiers loads its one ONNX model (toxic-bert) inside its guardrail on the first classification, without the shared registry.
+The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Packs register factories at activation; the factory only runs on the first call that asks for the key. Subsequent calls (other tools in the same pack, the streaming guardrail, supervisor agents) share the cached instance. The 110MB BERT NER model in pii-redaction and the NLI entailment pipeline in grounding-guard lazy-load this way. Two packs load their model on first use without the shared registry: ml-classifiers loads its one ONNX model (toxic-bert) inside its guardrail on the first classification, and topicality loads its embedding model (all-MiniLM-L6-v2) once per process on the first input it checks.
 
 ### What this looks like end-to-end
 
