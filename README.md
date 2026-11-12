@@ -66,7 +66,9 @@ const manifest = await createCuratedManifest({ tools: 'all' });
 //    services.has('agentos:nlp:ner-pipeline') is false.
 //    The PII guard reads the final reply only (its evaluateStreamingChunks
 //    option is false by default), so hold streamed output or the streamed
-//    text reaches the person before the redaction.
+//    text reaches the person before the redaction. guardrailOutputMode (and
+//    requiredGuardrails) exist from @framers/agentos 0.13.3; an older core
+//    ignores the option and streams.
 const agent = new AgentOS();
 await agent.initialize({ extensionManifest: manifest, guardrailOutputMode: 'hold' });
 
