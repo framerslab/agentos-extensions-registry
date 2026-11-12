@@ -42,7 +42,7 @@ Every catalog entry in `CHANNEL_CATALOG`, `TOOL_CATALOG`, and `PROVIDER_CATALOG`
 
 ### Layer 3: per-extension `requiredSecrets` in catalog metadata
 
-`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. Optional secrets unlock optional features (the LLM judge in pii-redaction) without making them required. The LLM tiers of topicality and ml-classifiers take no secret: they run when the host passes an `llmInvoker` callback in the pack's options.
+`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. A pack can also read a secret its entry does not require. The LLM judge in pii-redaction is one: it runs only when the host sets the pack's `llmJudge` option, and when that option carries no `apiKey` the judge asks AgentOS for the secret `<provider>.apiKey` (from `extensionSecrets`, else that provider's environment variable, such as `OPENAI_API_KEY`), then `pii.llm.apiKey` (from `extensionSecrets` only). A key alone never turns the judge on. The LLM tiers of topicality and ml-classifiers take no secret: they run when the host passes an `llmInvoker` callback in the pack's options.
 
 ### Layer 4: heavy resources defer to `SharedServiceRegistry`
 

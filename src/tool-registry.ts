@@ -497,7 +497,7 @@ export const TOOL_CATALOG: ExtensionInfo[] = [
     description: 'Four-tier PII detection and redaction (regex + NLP + NER + LLM-as-judge) with streaming support.',
     requiredSecrets: [],
     defaultPriority: 10,
-    envVars: ['PII_LLM_API_KEY'],
+    envVars: [],
     docsUrl: '/docs/extensions/built-in/pii-redaction',
   },
   {
