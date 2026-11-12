@@ -79,3 +79,13 @@ describe('web-search catalog entry', () => {
     );
   });
 });
+
+describe('pii-redaction catalog entry', () => {
+  // The pack reads no environment variable. Its LLM judge takes its key from
+  // the llmJudge option or from the extension manager's secrets, so a host
+  // that sets PII_LLM_API_KEY changes nothing.
+  it('lists no environment variable the pack does not read', () => {
+    const entry = TOOL_CATALOG.find((tool) => tool.name === 'pii-redaction');
+    expect(entry?.envVars).toEqual([]);
+  });
+});
