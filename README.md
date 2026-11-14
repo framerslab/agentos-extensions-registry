@@ -42,11 +42,11 @@ Every catalog entry in `CHANNEL_CATALOG`, `TOOL_CATALOG`, and `PROVIDER_CATALOG`
 
 ### Layer 3: per-extension `requiredSecrets` in catalog metadata
 
-`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. Optional secrets unlock optional features (the LLM judge in pii-redaction, the LLM fallback in topicality and ml-classifiers) without making them required.
+`CHANNEL_CATALOG` and `TOOL_CATALOG` entries declare which secret keys an extension expects (mapped to environment variables via `SECRET_ENV_MAP`). When the runtime activates a descriptor, it consults `requiredSecrets` and skips activation if a non-optional secret is unresolvable. A pack can also read a secret its entry does not require. The LLM judge in pii-redaction is one: it runs only when the host sets the pack's `llmJudge` option, and when that option carries no `apiKey` the judge asks AgentOS for the secret `<provider>.apiKey` (from `extensionSecrets`, else that provider's environment variable, such as `OPENAI_API_KEY`), then `pii.llm.apiKey` (from `extensionSecrets` only). A key alone never turns the judge on. The LLM tiers of topicality and ml-classifiers take no secret: they run when the host passes an `llmInvoker` callback in the pack's options.
 
 ### Layer 4: heavy resources defer to `SharedServiceRegistry`
 
-The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Packs register factories at activation; the factory only runs on the first call that asks for the key. Subsequent calls (other tools in the same pack, the streaming guardrail, supervisor agents) share the cached instance. The 110MB BERT NER model in pii-redaction, the ONNX classifier orchestrator in ml-classifiers, the NLI entailment pipeline in grounding-guard, and the embedding model in topicality all lazy-load this way.
+The runtime's `ExtensionLifecycleContext.services` exposes a `getOrCreate(key, factory)` API. Nothing is registered at activation: a pack passes the factory with the key on the first call that needs the resource, the registry runs it then, and later calls for that key (other tools in the same pack, its guardrail, other packs on the same registry) share the cached instance. `has(key)` stays false until that factory has run. The BERT NER model in pii-redaction (about 109 MB at its default `q8` weights, key `agentos:nlp:ner-pipeline`) and the NLI entailment pipeline in grounding-guard lazy-load this way. Two packs load their model on first use without the shared registry: ml-classifiers loads its one ONNX model (toxic-bert) inside its guardrail on the first classification, and topicality loads its embedding model (all-MiniLM-L6-v2) once per process on the first input it checks.
 
 ### What this looks like end-to-end
 
@@ -62,15 +62,19 @@ import { createCuratedManifest } from '@framers/agentos-extensions-registry';
 const manifest = await createCuratedManifest({ tools: 'all' });
 // → manifest.packs.length === 1 (only the PII redaction pack made it).
 
-// 3. AgentOS activates the pack. The 110MB NER model is NOT loaded yet —
-//    SharedServiceRegistry just registered a factory under 'pii:ner-model'.
+// 3. AgentOS activates the pack. Nothing loads and nothing is registered:
+//    services.has('agentos:nlp:ner-pipeline') is false.
+//    The PII guard reads the final reply only (its evaluateStreamingChunks
+//    option is false by default), so hold streamed output or the streamed
+//    text reaches the person before the redaction. guardrailOutputMode (and
+//    requiredGuardrails) exist from @framers/agentos 0.13.3; an older core
+//    ignores the option and streams.
 const agent = new AgentOS();
-await agent.initialize({ extensionManifest: manifest });
+await agent.initialize({ extensionManifest: manifest, guardrailOutputMode: 'hold' });
 
-// 4. First user message hits the input pipeline. The PII guardrail's
-//    evaluateInput() fires. NER model loads. Subsequent calls hit the cache.
-//    The streaming output guardrail reuses the same cached model on every
-//    TEXT_DELTA chunk.
+// 4. The first scan that needs the NER tier asks the registry for
+//    'agentos:nlp:ner-pipeline', and the model loads then. Later scans and
+//    the pack's pii_scan and pii_redact tools share it.
 ```
 
 For dispatcher mechanics (Phase 1 sequential sanitizers, Phase 2 parallel classifiers, worst-action aggregation, mid-stream override), see [Guardrails](https://docs.agentos.sh/features/guardrails). For the full lifecycle, see [Extension Loading](https://docs.agentos.sh/architecture/extension-loading) and [Auto-Loading Extensions](https://docs.agentos.sh/extensions/auto-loading).
