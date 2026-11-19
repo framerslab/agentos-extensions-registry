@@ -873,7 +873,7 @@
   {
     "id": "com.framers.integrations.github",
     "name": "GitHub Extension",
-    "description": "GitHub API tools: 26 tools for repos, issues, PRs, branches, commits, releases, Actions, files, gists, and codebase indexing. Its ./documents entry adds a GitHub App's installation mode (the app's JWT, installation tokens, the user's web flow, webhook deliveries checked and read as typed events, a daily reconcile, every call under a deadline with rate limit timing) and a connector that reads a repository's documentation as account sources.",
+    "description": "GitHub API tools: 26 tools for repos, issues, PRs, branches, commits, releases, Actions, files, gists, and codebase indexing. Its ./documents entry adds a GitHub App's installation mode (the app's JWT, installation tokens, the user's web flow, webhook deliveries checked and read as typed events, a daily reconcile, every call under a deadline with rate limit timing), calls made on a person's own token (the issues assigned to them, an issue opened and closed, the token's refresh and the grant's revoke) and a connector that reads a repository's documentation as account sources.",
     "category": "tool",
     "tools": [
       "github_search",
@@ -906,6 +906,26 @@
     "requiredSecrets": [
       "github.token"
     ]
+  },
+  {
+    "id": "com.framers.integrations.jira",
+    "name": "Jira",
+    "description": "Jira Cloud for a host that keeps its own grant: OAuth 2.0 (3LO) on granular scopes, a REST v3 client through the site's cloud id, and the issue tracker interface of the account sources library",
+    "category": "integrations",
+    "tools": [
+      "jira"
+    ],
+    "requiredSecrets": []
+  },
+  {
+    "id": "com.framers.integrations.linear",
+    "name": "Linear",
+    "description": "Linear for AgentOS: OAuth 2.0 with PKCE on the core's redirect flow, a GraphQL client over fetch, and the issue tracker interface of the account sources library",
+    "category": "integrations",
+    "tools": [
+      "linear"
+    ],
+    "requiredSecrets": []
   },
   {
     "id": "com.framers.integrations.notion",
@@ -983,39 +1003,6 @@
       "speech_to_text"
     ],
     "requiredSecrets": []
-  },
-  {
-    "id": "com.framers.media.wildweave-film",
-    "name": "WildWeave Film Studio Extension",
-    "description": "WildWeave's film studio as 22 tools and an MCP server: read and edit a film's timeline and sidecar in a wilds.ai account through the studio's API with a per-account key, export it into the film repository, run the local film engine (cut, validate, strip, coverage, render, preview push) and keep the proposals yes-list.",
-    "category": "tool",
-    "tools": [
-      "wildweave_film_list",
-      "wildweave_film_documents",
-      "wildweave_film_document_read",
-      "wildweave_film_timeline",
-      "wildweave_film_scene",
-      "wildweave_film_validate",
-      "wildweave_film_edit",
-      "wildweave_film_edits",
-      "wildweave_film_revert",
-      "wildweave_film_import",
-      "wildweave_film_export",
-      "wildweave_film_inspect",
-      "wildweave_film_cut",
-      "wildweave_film_strip",
-      "wildweave_film_coverage",
-      "wildweave_film_render",
-      "wildweave_film_records",
-      "wildweave_film_preview",
-      "wildweave_film_preview_push",
-      "wildweave_film_proposals",
-      "wildweave_film_proposal_submit",
-      "wildweave_film_proposal_decide"
-    ],
-    "requiredSecrets": [
-      "wildweave.studio.key"
-    ]
   },
   {
     "id": "com.framers.meetings.browser",
@@ -1184,7 +1171,7 @@
   {
     "id": "com.framers.research.citation-check",
     "name": "Citation Check",
-    "description": "Checks the quoted claims of a document against the pages they cite, with AgentOS's citation tooling: word for word first, then by embeddings when a model is configured",
+    "description": "Checks the quoted claims of a document against the pages they cite, with AgentOS's citation tooling: word for word first, then by embeddings when a model is configured. Reads public pages under robots.txt and a host's rules, and serves the open web as a public source",
     "category": "research",
     "tools": [
       "citation_verify"
@@ -1306,7 +1293,7 @@
   {
     "id": "com.framers.research.web-search",
     "name": "Web Search Extension",
-    "description": "Multi-provider web search with Firecrawl, Tavily, Serper, Brave — RRF fusion, semantic dedup, Cohere/LLM neural reranking, research aggregation, and fact-checking for AgentOS",
+    "description": "Multi-provider web search for AgentOS: by default the first configured provider that returns without an error, even with no results (Serper, Tavily, Brave, SerpAPI, Firecrawl, SearXNG, then DuckDuckGo); with multiSearch, every configured provider and DuckDuckGo in parallel, deduplicated by URL and ranked by cross-provider agreement; English Wikipedia, with no key, when a host enables it, pinned or with multiSearch; plus research aggregation and fact-checking",
     "category": "productivity",
     "tools": [
       "web_search",
@@ -1378,7 +1365,7 @@
   {
     "id": "com.framers.system.operations",
     "name": "Operations",
-    "description": "Operations records in a product's own database through the SQL storage adapter: support requests with a per-request anonymous id, a live stream, mail and bell outboxes, pictures, deletions and an export; a log table with search; an events table with daily totals over the product's figures; and the jobs that keep them, under a table prefix of its own. Error capture and health checks are typed stubs until the next minor release.",
+    "description": "Operations records in a product's own database through the SQL storage adapter: support requests with a per-request anonymous id, a live stream, mail and bell outboxes, pictures, deletions and an export; a log table with search; an events table with daily totals over the product's figures; and the jobs that keep them, under a table prefix of its own. Error capture, the health checks, box samples and outages stay typed stubs until their release.",
     "category": "system",
     "tools": [
       "operations"
